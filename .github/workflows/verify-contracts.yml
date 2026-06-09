@@ -1,0 +1,54 @@
+name: verify-contracts
+
+# Catches the #1 maintenance hazard for this repo: a slash command or skill
+# referencing an MCP tool name that doesn't exist (typo, rename, or a
+# hallucinated name like the v0.1.0 `beacon.issue`). Pure config + Markdown has
+# no compiler, so this is the guardrail.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  tool-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Verify MCP tool references
+        run: python3 scripts/verify_tool_names.py
+      - name: Router table is generated from the manifest (not hand-edited)
+        run: python3 scripts/generate_router.py --check
+      - name: Tool-routing eval coverage (static)
+        run: python3 evals/run_evals.py
+      - name: DNS-provider helper unit tests
+        run: python3 scripts/dns_provider_test.py
+
+  beacon-contract:
+    # Live check that Beacon still exposes the tool names the Rails cert_* proxy
+    # depends on (tools/manifest.json `beacon` section). SEPARATE job and
+    # non-blocking on purpose: it needs the network + a Beacon token, so a prod
+    # outage or missing secret must not block merges. A clean run is a real
+    # signal; an inconclusive run (exit 2) is ignored. Only exit 1 (actual
+    # drift) is worth a human looking - surfaced in the job log, not as a gate.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Beacon tool-name contract (live, non-blocking)
+        env:
+          BEACON_PLUGIN_TOKEN_PUBLIC: ${{ secrets.BEACON_PLUGIN_TOKEN_PUBLIC }}
+        run: |
+          status=0
+          python3 scripts/verify_beacon_contract.py || status=$?
+          if [ "$status" = "2" ]; then
+            echo "::warning::Beacon contract check inconclusive (no token or unreachable) - skipping."
+            exit 0
+          fi
+          exit $status

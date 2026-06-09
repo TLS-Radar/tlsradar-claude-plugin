@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: TLS Radar product support
+    url: https://tlsradar.com/contact
+    about: For account questions, billing, or anything not specific to the plugin code
+  - name: Security disclosure
+    url: https://github.com/TLS-Radar/tlsradar-claude-plugin/security/policy
+    about: Don't file public issues for security reports - email security@tlsradar.com

@@ -1,0 +1,61 @@
+name: Bug report
+description: Something in the plugin isn't working as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Before filing, please confirm:
+        - `/tls-diagnose` doesn't surface the issue (it checks the MCP server, auth, and certificate-backend reachability)
+        - You're on the latest plugin version (check `.claude-plugin/plugin.json`)
+        - It's not a security issue (those go to security@tlsradar.com - see [SECURITY.md](../../SECURITY.md))
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, what did you expect, what did you get instead?
+      placeholder: |
+        I ran `/tls-monitor add example.com` and got "..." but expected "..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnose-output
+    attributes:
+      label: `/tls-diagnose` output
+      description: Paste the full output of `/tls-diagnose` (it's safe - no tokens are included)
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin version
+      description: From `.claude-plugin/plugin.json`
+      placeholder: "0.4.0"
+    validations:
+      required: true
+
+  - type: input
+    id: claude-code-version
+    attributes:
+      label: Claude Code version
+      description: Run `claude --version` in your terminal
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 14, Ubuntu 22.04, Windows 11"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Anything else
+      description: Logs, screenshots, related issues, etc.

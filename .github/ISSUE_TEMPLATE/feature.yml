@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest a new slash command, skill behavior, or workflow
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve
+      description: |
+        Lead with the user-facing problem, not the proposed solution. "I want to bulk-renew 20 certs" is more useful than "add a bulk-renew command" - there might be a better solution.
+      placeholder: I'm managing 30 cert renewals and doing them one at a time is...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind (optional)
+      description: Concrete proposal if you have one - a slash command, a new skill behavior, a workflow improvement, etc.
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Which area
+      options:
+        - "New slash command"
+        - "Existing command behavior change"
+        - "Skill / NL routing"
+        - "Funnel UX (upgrade prompts, 402 handling)"
+        - "Documentation"
+        - "Other"
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you've tried
+      description: What does this look like today without the feature?

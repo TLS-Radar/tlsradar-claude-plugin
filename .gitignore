@@ -1,0 +1,41 @@
+# --- OS / editor cruft ---
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# --- Local env / secrets (never commit) ---
+*.local
+.env
+.env.*
+.envrc
+
+# --- Provider / cloud credentials (defense in depth) ---
+# These belong in your shell env, never in the repo.
+.aws/
+credentials
+*.credentials
+*_token
+*_secret
+
+# --- Certificate material ---
+# The plugin writes keys/CSRs/certs to ~/.config/tlsradar, never the repo -
+# this is a guard against anyone generating them inside a clone while testing.
+*.pem
+*.key
+*.csr
+*.p12
+*.pfx
+*.crt
+*.der
+
+# --- TLS Radar local state (lives in ~/.config/tlsradar; guard a stray copy) ---
+install_id
+welcomed*
+certs/
+
+# --- Python bytecode from the helper scripts/tests ---
+__pycache__/
+*.pyc
+.pytest_cache/

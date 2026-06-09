@@ -1,0 +1,20 @@
+{
+  "name": "tlsradar",
+  "owner": {
+    "name": "TLS Radar",
+    "url": "https://tlsradar.com"
+  },
+  "metadata": {
+    "description": "Free SSL/TLS scanning, Let's Encrypt issuance, and certificate monitoring inside Claude Code.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "tlsradar",
+      "source": "./",
+      "description": "SSL/TLS certificate scanning, free Let's Encrypt issuance (private key stays local), and ongoing expiry monitoring - through one MCP server. Free anonymous scans + cert issuance; OAuth via /mcp for monitoring.",
+      "category": "security",
+      "keywords": ["ssl", "tls", "certificates", "monitoring", "letsencrypt", "security"]
+    }
+  ]
+}
