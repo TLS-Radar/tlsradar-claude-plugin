@@ -1,0 +1,85 @@
+name: release
+
+# Version-file-driven releases. Bump the version in
+# .claude-plugin/plugin.json (and add a matching CHANGELOG.md section), merge to
+# main, and this cuts the `vX.Y.Z` tag + GitHub Release automatically. It's
+# idempotent: if the tag for the current version already exists, it no-ops, so
+# re-running or unrelated edits to plugin.json won't double-release.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".claude-plugin/plugin.json"
+  workflow_dispatch: {} # allow a manual run from the Actions tab
+
+permissions:
+  contents: write # needed to create the tag and the release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the tag check can see existing tags
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      # Read the version and validate it against a strict semver pattern BEFORE
+      # it touches any shell. The value comes from a repo file (PR-reviewed), but
+      # validating here means a malformed/hostile version string can never be
+      # interpolated into a later `run:` or injected into $GITHUB_OUTPUT.
+      - name: Read plugin version
+        id: ver
+        run: |
+          v=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+          if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::plugin.json version '$v' is not a valid semver string"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $v"
+
+      - name: Skip if tag already exists
+        id: check
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag v${VERSION} already exists — nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build release notes from CHANGELOG
+        if: steps.check.outputs.exists == 'false'
+        id: notes
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          if python3 scripts/extract_changelog.py "${VERSION}" > RELEASE_NOTES.md; then
+            echo "have_notes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have_notes=false" >> "$GITHUB_OUTPUT"
+            echo "No CHANGELOG section — will fall back to auto-generated notes."
+          fi
+
+      - name: Create tag and release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          HAVE_NOTES: ${{ steps.notes.outputs.have_notes }}
+        run: |
+          tag="v${VERSION}"
+          git tag "$tag"
+          git push origin "$tag"
+          if [ "$HAVE_NOTES" = "true" ]; then
+            gh release create "$tag" --title "$tag" --notes-file RELEASE_NOTES.md
+          else
+            gh release create "$tag" --title "$tag" --generate-notes
+          fi
