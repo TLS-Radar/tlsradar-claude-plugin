@@ -36,8 +36,7 @@ There is no binary. The plugin is pure configuration + Markdown. Claude Code's M
 ├── scripts/dns_provider_test.py       ← unit tests for the gotcha-prone provider logic (root/quoting/payloads)
 ├── evals/                             ← tool-routing evals (prompt → expected tool); static check runs in CI
 ├── .github/workflows/verify-contracts.yml ← runs guard + router --check + eval on every PR/push
-├── commands/
-│   ├── README.md                      ← how to add/edit slash commands
+├── commands/                          ← slash commands (how to add one: CONTRIBUTING.md)
 │   ├── tls-scan.md                    ← free anonymous scan (public)
 │   ├── tls-cert.md                    ← free LE cert issuance via tlsradar.cert_* (CSR-only, local key)
 │   ├── tls-renew.md                   ← cert renewal (usually just cert_create again)
