@@ -5,7 +5,7 @@
     "url": "https://tlsradar.com"
   },
   "metadata": {
-    "description": "Free SSL/TLS scanning, Let's Encrypt issuance, and certificate monitoring inside Claude Code.",
+    "description": "Free SSL/TLS scanning, Let's Encrypt issuance, and certificate monitoring inside Claude Code and Cowork.",
     "version": "1.0.0"
   },
   "plugins": [

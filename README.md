@@ -1,6 +1,6 @@
-# TLS Radar Claude Code Plugin
+# TLS Radar plugin for Claude Code & Cowork
 
-Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monitoring from inside Claude Code - through a single MCP server, with nothing to configure.
+Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monitoring from inside Claude Code or Claude Cowork - through a single MCP server, with nothing to configure.
 
 ```
 # Public - no account, no setup
@@ -44,6 +44,10 @@ You choose how to prove control of the domain, and the plugin remembers your cho
 
 When a cert is issued, TLS Radar emails you about ongoing monitoring - the cert → monitoring handoff is fully automatic and server-side.
 
+### Works in Claude Code and Cowork
+
+This is a standard plugin, so it runs in both **Claude Code** and **Claude Cowork**. Scanning, certificate issuance, and monitoring all work in either client: the tools come from one MCP server, and the certificate flow runs `openssl` plus a bundled helper script locally (both clients can run local commands and the bundled script via `${CLAUDE_PLUGIN_ROOT}`). Connecting for monitoring uses your client's built-in OAuth - `/mcp` in Claude Code, or the equivalent connect step in Cowork.
+
 ## Install
 
 In Claude Code, add the marketplace and install - two commands, no clone, no paths:
@@ -53,7 +57,7 @@ In Claude Code, add the marketplace and install - two commands, no clone, no pat
 /plugin install tlsradar@tlsradar
 ```
 
-(Or browse it in the `/plugin` menu after adding the marketplace.) That's it - scanning and cert issuance work immediately. Run `/mcp` when you want monitoring.
+(Or browse it in the `/plugin` menu after adding the marketplace.) In **Claude Cowork**, add it from the plugin catalog (search "TLS Radar"). That's it - scanning and cert issuance work immediately. Run `/mcp` (or Cowork's connect step) when you want monitoring.
 
 <details>
 <summary>Manual install (no marketplace)</summary>
