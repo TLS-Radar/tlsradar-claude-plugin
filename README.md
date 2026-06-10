@@ -106,9 +106,9 @@ Nothing is required. Optional environment variables:
 ├── .claude-plugin/plugin.json       # plugin manifest
 ├── .claude-plugin/marketplace.json  # self-hosting marketplace entry
 ├── .mcp.json                        # MCP server config (one remote URL)
-├── commands/                        # slash commands (with their own README)
+├── commands/                        # slash commands (how to add one: CONTRIBUTING.md)
 ├── skills/                          # NL skill router (with its own README)
-├── hooks/hooks.json                 # SessionStart welcome + install-id mint
+├── hooks/hooks.json                 # one-time SessionStart welcome (print only)
 ├── tools/manifest.json              # single source of truth for tool names
 ├── scripts/                         # CI guards + tested DNS-provider helper
 └── evals/                           # tool-routing evals (prompt → expected tool)

@@ -5,6 +5,21 @@ The format follows [Keep a Changelog](https://keepachangelog.com/); the plugin
 uses [semantic versioning](https://semver.org/). The authoritative version is in
 [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json).
 
+## [0.5.1] - 2026-06-10
+
+Docs-only patch for clean strict plugin validation.
+
+### Changed
+- **`commands/README.md` folded into `CONTRIBUTING.md` and removed.**
+  `claude plugin validate --strict` parsed every flat `.md` under `commands/`
+  as a slash command and flagged the dev-doc README for having no frontmatter.
+  Moving it out of `commands/` clears that warning.
+- **Refreshed stale doc lines to match 0.5.0:** the `.mcp.json` "install header"
+  note, the hook "install-id mint" note, and the `commands/`/`skills/` tree
+  labels in `CLAUDE.md` and `README.md`.
+
+No runtime or behavior changes.
+
 ## [0.5.0] - 2026-06-10
 
 Marketplace-readiness: anonymous attribution no longer touches your shell
