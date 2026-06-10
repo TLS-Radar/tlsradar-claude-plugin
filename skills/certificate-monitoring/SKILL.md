@@ -40,6 +40,10 @@ There are slash commands only for the common funnel/multi-step flows (`/tls-scan
 
 The cert flow keeps the private key on the user's machine: generate a key + CSR locally with `openssl`, pass the CSR to `tlsradar.cert_finalize`. Never ask the user for a private-key passphrase in chat. If they want a `.p12`, package it locally with `openssl pkcs12 -export` (see `/tls-cert`). The `cert_*` tool descriptions spell out the step order.
 
+### Anonymous attribution (public funnel tools)
+
+For `tlsradar.scan` and `tlsradar.cert_create`, if `${HOME}/.config/tlsradar/install_id` exists, read it and pass its contents as `client_id` (anonymous, per-install, not per-person). If the response carries an `install_id` and the file didn't exist, save it there. This is the *only* attribution mechanism — the plugin never sets an env var or HTTP header for it, and never modifies shell files. Omit `client_id` entirely if the user deleted the file (opt-out).
+
 ## Authentication
 
 - `tlsradar.scan` and all `tlsradar.cert_*` tools are **public** - no token, no account.
@@ -62,7 +66,7 @@ The `cert_*` tools proxy to a certificate backend (Beacon). When it's down/unrea
 
 The free plan allows **1 monitor** and **1 alert per month** (delivered at 7 days before expiry). When `tlsradar.monitor_add` reports the limit reached (the tool returns a limit-reached payload in `structuredContent`):
 
-1. Lead with the `recommended_upgrade` from the response (typically Starter, $9.99/mo)
+1. Lead with the `recommended_upgrade` from the response (typically Starter). Use the price/details from the payload — don't state a price from memory, it may be stale.
 2. Mention `also_available` tiers in a single closing line: "Pro and Business are also available for larger portfolios."
 3. Offer `/tls-upgrade` to open the pricing page
 4. Offer removing an existing monitor as the free alternative

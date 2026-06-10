@@ -2,10 +2,7 @@
   "mcpServers": {
     "tlsradar": {
       "type": "http",
-      "url": "${TLSRADAR_BASE_URL:-https://tlsradar.com}/api/v1/mcp",
-      "headers": {
-        "X-TLSRadar-Install": "${TLSRADAR_INSTALL_ID:-}"
-      }
+      "url": "${TLSRADAR_BASE_URL:-https://tlsradar.com}/api/v1/mcp"
     }
   }
 }

@@ -5,7 +5,41 @@ The format follows [Keep a Changelog](https://keepachangelog.com/); the plugin
 uses [semantic versioning](https://semver.org/). The authoritative version is in
 [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json).
 
-## [0.4.0] - current
+## [0.5.0] - 2026-06-10
+
+Marketplace-readiness: anonymous attribution no longer touches your shell
+config or sends a tracking header.
+
+### Removed
+- **Shell-config modification.** The plugin no longer appends anything to your
+  `~/.zshrc` / `~/.bashrc` / `~/.profile`.
+- **Default tracking header.** `.mcp.json` no longer sends an
+  `X-TLSRadar-Install` header.
+- **The risky SessionStart hook operations.** The welcome hook no longer runs
+  `openssl`, the legacy `mv …/credentials.json` migration, or `rm` cleanups, and
+  never touches your shell config. It now does only a `printf` welcome plus a
+  one-time `touch` of a flag file in the plugin's own config dir (so it shows
+  once, not every session). The install id is created by `/tls-scan` and
+  `/tls-cert` from the server response, not the hook.
+
+> **Upgrading from 0.4.0:** 0.4.0 added an `export TLSRADAR_INSTALL_ID=…` line
+> (under a `# tlsradar-install-id` comment) to your shell rc. The new hook
+> neither adds nor removes it — removing it would mean editing your shell
+> config again, the very thing we stopped doing. The line is now harmless (the
+> header that read it is gone), but you can delete those two lines yourself.
+
+### Changed
+- **Attribution now rides on a tool argument.** `/tls-scan` and `/tls-cert`
+  read the install id from `~/.config/tlsradar/install_id` and pass it as a
+  `client_id` argument — same anonymous, per-install signal, with no shell
+  changes and no header. Opt out by deleting that file.
+- **`/tls-cert` now states what your email is used for** when it's collected:
+  the Let's Encrypt order and a one-time monitoring follow-up (marketing stays
+  opt-in, default off).
+- **Tighter `/tls-cert` permissions.** Dropped the blanket `Bash(aws*)` /
+  `Bash(open*)` grants and scoped `python3` to the bundled DNS helper.
+
+## [0.4.0]
 
 The single-MCP-server, key-stays-local, funnel-attribution release.
 
@@ -18,9 +52,9 @@ The single-MCP-server, key-stays-local, funnel-attribution release.
   `welcomed.v<semver>`), so routine releases don't re-show the welcome.
 
 ### Added
-- **Anonymous funnel attribution, on by default.** The SessionStart hook mints
-  an install id and appends an opt-out `export TLSRADAR_INSTALL_ID=…` line to
-  your shell rc. Disclosed in the welcome; delete the line to opt out.
+- **Anonymous funnel attribution.** The SessionStart hook mints an install id
+  at `~/.config/tlsradar/install_id`. (0.4.0 also exported it via a shell-rc
+  line; that was removed in 0.5.0 — see above.)
 - **HTTP-01 and DNS-01 challenges**, including provider automation
   (`dns-01-cloudflare`, `dns-01-route53`) via a tested local helper
   (`scripts/dns_provider.py`) that reads credentials from your local env only.

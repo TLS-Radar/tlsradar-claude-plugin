@@ -1,7 +1,7 @@
 ---
 description: Issue a free 90-day Let's Encrypt certificate
 argument-hint: <domain>
-allowed-tools: Bash(openssl*), Bash(python3*), Bash(aws*), Bash(mkdir*), Bash(open*), Read, Write
+allowed-tools: Bash(openssl*), Bash(python3 *dns_provider.py*), Bash(mkdir -p *tlsradar*), Read, Write
 ---
 
 Issue a free SSL/TLS certificate from Let's Encrypt for `$ARGUMENTS`, entirely through the TLS Radar MCP server's `cert_*` tools. The private key is generated **locally** and never leaves the machine.
@@ -29,6 +29,8 @@ When the user picks one, ask "save as the default?" - if yes, write it back to `
 The Beacon `challenge` value is `http-01` for `http-01`, otherwise `dns-01` (all three dns-01 variants differ only in *how the plugin sets the TXT record*).
 
 ## 2. Start the order
+
+You'll need the user's email. When you ask for it (or before using one from context), tell them plainly what it's for: **the Let's Encrypt order, and a one-time follow-up email from TLS Radar about monitoring this certificate's expiry. No marketing unless they opt in.** Only set `marketing_consent: true` if they explicitly ask for it (default is off — keep it off).
 
 Read `${HOME}/.config/tlsradar/install_id` if it exists. Call `tlsradar.cert_create` with `domain=$ARGUMENTS`, `email`, `challenge` (`dns-01` or `http-01`), and `client_id` = that install id (for anonymous funnel attribution; omit if the file is absent). It returns `order_id`, either `dns_records` or `http_files`, a `resume_token`, and an `install_id`.
 
