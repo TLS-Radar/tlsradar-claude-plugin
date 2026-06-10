@@ -2,11 +2,11 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "! test -f ${HOME}/.config/tlsradar/welcomed.rev1",
+        "matcher": "! test -f ${HOME}/.config/tlsradar/welcomed.rev2",
         "hooks": [
           {
             "type": "command",
-            "command": "mkdir -p \"${HOME}/.config/tlsradar\" && if [ ! -f \"${HOME}/.config/tlsradar/install_id\" ]; then (openssl rand -hex 16 > \"${HOME}/.config/tlsradar/install_id\" 2>/dev/null || true); fi && ID=\"$(cat \"${HOME}/.config/tlsradar/install_id\" 2>/dev/null)\" && if [ -n \"$ID\" ]; then case \"$(basename \"${SHELL:-sh}\")\" in zsh) RC=\"${HOME}/.zshrc\";; bash) RC=\"${HOME}/.bashrc\";; *) RC=\"${HOME}/.profile\";; esac; if ! grep -q tlsradar-install-id \"$RC\" 2>/dev/null; then printf '\\n# tlsradar-install-id (anonymous funnel attribution; delete this line to opt out)\\nexport TLSRADAR_INSTALL_ID=%s\\n' \"$ID\" >> \"$RC\"; fi; fi && if [ -f \"${HOME}/.config/tlsradar/credentials.json\" ]; then mv \"${HOME}/.config/tlsradar/credentials.json\" \"${HOME}/.config/tlsradar/credentials.json.v0.1.0.bak\"; fi && rm -f \"${HOME}/.config/tlsradar/welcomed\" \"${HOME}/.config/tlsradar/welcomed.v0.2.0\" \"${HOME}/.config/tlsradar/welcomed.v0.3.0\" && printf '\\n👋 TLS Radar plugin v0.4.0 ready.\\n\\n  /tls-scan <domain>      free SSL/TLS scan, no account\\n  /tls-cert <domain>      free Let'\\''s Encrypt cert (private key stays local)\\n  /tls-renew <domain>     renew a certificate\\n  /mcp                    connect for monitoring (OAuth)\\n  /tls-monitor add ...    ongoing monitoring (after /mcp)\\n  /tls-diagnose           health check\\n\\nOne connection, nothing to configure.\\nAn anonymous usage id was added to your shell profile so we can\\nmeasure the plugin'\\''s reach; delete the tlsradar line there to opt out.\\nDocs: https://tlsradar.com/cli\\n\\n' && touch \"${HOME}/.config/tlsradar/welcomed.rev1\""
+            "command": "mkdir -p \"${HOME}/.config/tlsradar\" && printf '\\n👋 TLS Radar plugin ready - nothing to configure, and it never touches your shell config.\\n\\n  /tls-scan <domain>     free SSL/TLS scan, no account\\n  /tls-cert <domain>     free Let'\\''s Encrypt cert (private key stays local)\\n  /mcp                    connect for monitoring (OAuth)\\n  /tls-monitor add ...    ongoing monitoring (after /mcp)\\n  /tls-diagnose           health check\\n\\nDocs: https://tlsradar.com/cli\\n\\n' && touch \"${HOME}/.config/tlsradar/welcomed.rev2\""
           }
         ]
       }

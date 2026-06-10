@@ -28,7 +28,7 @@ By design, the plugin ships nothing sensitive:
 - **OAuth tokens** for authenticated tools are obtained and stored by Claude Code's built-in MCP client (`/mcp`), not by this plugin.
 - **DNS-provider credentials** (`CLOUDFLARE_API_TOKEN`, AWS CLI config) are read from your **local** environment by `scripts/dns_provider.py` and are never sent to TLS Radar or Beacon.
 - **Certificate private keys** are generated locally with `openssl` and never leave your machine.
-- `TLSRADAR_INSTALL_ID` is an anonymous, non-secret attribution id minted on your machine; it identifies an install for funnel analytics, not a user.
+- The **anonymous usage id** is a non-secret random value stored at `~/.config/tlsradar/install_id` and passed by the scan/cert commands as a `client_id` tool argument. It identifies an install for analytics, not a user. The plugin sets **no env var and no HTTP header** for it and **does not modify your shell config**; delete the file to opt out.
 
 ## What we ask of researchers
 

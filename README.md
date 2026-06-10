@@ -78,9 +78,10 @@ When you hit the monitor limit, the tool's response includes the recommended upg
 Nothing is required. Optional environment variables:
 
 - `TLSRADAR_BASE_URL` - override the TLS Radar URL (default `https://tlsradar.com`). Useful for staging/self-host.
-- `TLSRADAR_INSTALL_ID` - anonymous funnel attribution id, **on by default**. On first run the SessionStart hook mints a random id at `~/.config/tlsradar/install_id` and appends an opt-out `export` line (behind a `# tlsradar-install-id` marker) to your shell rc (`~/.zshrc`, `~/.bashrc`, or `~/.profile`). From the next shell on, `.mcp.json` sends it as the `X-TLSRadar-Install` header so anonymous scan/cert usage can be attributed to one install. It identifies an install, not a person.
 
-  **To opt out:** delete that line from your shell rc (and optionally `rm ~/.config/tlsradar/install_id`). With it unset, the server records nothing.
+**Anonymous usage id.** On first run the plugin mints a random id at `~/.config/tlsradar/install_id` and the scan/cert commands pass it (as a `client_id` argument) so anonymous usage can be attributed to one install. It identifies an install, not a person. The plugin **does not modify your shell config and sends no tracking header** — the id travels only as that argument, read from the local file.
+
+  **To opt out:** `rm ~/.config/tlsradar/install_id`. With the file gone, no id is sent.
 
 ## Privacy & security
 
@@ -88,7 +89,7 @@ Nothing is required. Optional environment variables:
 - The OAuth token is managed by Claude Code's MCP client, not by this plugin.
 - Certificate private keys are generated locally and never sent to any server.
 - DNS-provider credentials (`CLOUDFLARE_API_TOKEN`, AWS CLI) are read from your local environment and never sent to TLS Radar or Beacon.
-- An anonymous install id is sent for funnel attribution (on by default - see Configuration above to opt out). It identifies an install, not a person.
+- An anonymous install id is sent for usage attribution, passed as a tool argument read from `~/.config/tlsradar/install_id` (see Configuration to opt out). The plugin modifies no shell files and sends no tracking header. It identifies an install, not a person.
 - To revoke access: `https://tlsradar.com/oauth/authorized_applications` or remove the MCP server in `/mcp`.
 - Access tokens expire in 2 hours; refresh tokens rotate on use, capped at 90 days.
 

@@ -2,15 +2,15 @@
 
 If you're a Claude Code (or other AI) instance working in this repo, this file is the fastest way to get your bearings. Read it first.
 
-## Mission
+## What this plugin is for
 
-This plugin exists to **drive subscriptions to tlsradar.com**. Every design choice serves that:
+It's the free, top-of-funnel entry point to TLS Radar: give developers genuinely useful free tools (scanning, Let's Encrypt issuance) with no account, and offer the people who want it an easy path into ongoing monitoring. Design choices that matter:
 
-- Free anonymous scans and free Beacon cert issuance lower the entry barrier so users install the plugin without an account.
-- The cert-issuance → monitoring handoff turns one-off Beacon users into TLS Radar monitor users (the conversion event).
-- Monitor cap hits surface a friendly 402 that leads with Starter ($9.99/mo) - the typical upgrade.
+- Free anonymous scans and free Beacon cert issuance let users try the plugin without an account — low friction is the whole point.
+- When a cert is issued, the optional cert → monitoring handoff is what turns a one-off Beacon user into a TLS Radar monitoring user (with the user's knowledge — the email's dual use is disclosed at collection, marketing stays opt-in).
+- Hitting the free monitor cap surfaces a friendly upgrade suggestion (Starter, ~$10/mo) — server-gated, shown once, never pushy, with the actual price coming from the server payload (see the funnel-etiquette rules in `skills/certificate-monitoring/SKILL.md`).
 
-When you change something, ask "does this make the funnel smoother or noisier?" If it adds friction at install, login, or cap-hit, it probably regresses conversion.
+When you change something, keep the experience low-friction and honest: useful free tools first, conversion as a side effect of value delivered, never a dark pattern. Don't add friction at install, login, or cap-hit.
 
 ## Architecture in one paragraph
 
@@ -53,14 +53,14 @@ There is no binary. The plugin is pure configuration + Markdown. Claude Code's M
 
 Only the common funnel/multi-step flows have slash commands now (`tls-scan`, `tls-cert`, `tls-renew`, `tls-monitor`, `tls-upgrade`, `tls-diagnose`). The thin 1:1 data tools (`expiring`, `scan_history`, `me`, `export`, `import`, `team_invite`) are reached by natural language through the skill - fewer command files to keep in sync with the backend.
 
-## The funnel (read carefully)
+## The scan → cert → monitoring flow (read carefully)
 
 ```
 User installs plugin (zero friction)
         ↓
 User runs /tls-scan example.com  (anonymous, no account)
         ↓
-   "value moment 1" - they see the scan works
+   (the user sees the scan works)
         ↓
 User runs /tls-cert mydomain.dev  (anonymous, all via the tlsradar server)
    Step 1: tlsradar.cert_create(domain, email)
@@ -72,7 +72,7 @@ User runs /tls-cert mydomain.dev  (anonymous, all via the tlsradar server)
            tlsradar.cert_finalize(order_id, csr_pem)
            → validates + waits for LE + issues, one call → PEM chain (key never left the box)
         ↓
-   "value moment 2" - they have a real LE cert; private key stayed local
+   (the user has a real LE cert; private key stayed local)
         ↓
 Beacon issuance completes → OnIssued fires →
    Beacon PUSHES to tlsradar.com/api/v1/beacon/certificate_issued
@@ -96,7 +96,7 @@ User clicks signup link → creates account → dashboard auto-adds monitor on f
    (DashboardController reads user.metadata["pending_prefill_domain"])
         ↓
 User is now a TLS Radar account holder watching a real domain.
-That domain's expiry alert in 83 days is the next conversion checkpoint
+That domain's expiry alert in ~83 days is the next natural touchpoint
 (7-day free vs 30-day Starter warning window).
 ```
 
@@ -135,7 +135,7 @@ The plugin no longer connects to `beacon.tlsradar.com/mcp` directly. `Beacon::Cl
 
 Plugin (user shell, interpolated by `.mcp.json` as `${VAR}` / `${VAR:-default}`):
 - `TLSRADAR_BASE_URL` - override the one MCP server URL for staging/self-host. Default `https://tlsradar.com`.
-- `TLSRADAR_INSTALL_ID` - optional anonymous funnel-attribution id (the hook mints one at `~/.config/tlsradar/install_id`; export it to activate). Sent as the `X-TLSRadar-Install` header; the MCP controller records it on `plugin_scan` / `plugin_cert_create` analytics. Unset = no-op. **There is no longer any `BEACON_PLUGIN_TOKEN` / `BEACON_BASE_URL` in the plugin** - those moved server-side to Rails.
+- **Anonymous attribution does NOT use an env var or header.** The hook mints `~/.config/tlsradar/install_id`; the `scan`/`cert_create` commands read that file and pass it as the `client_id` argument. The plugin never writes to the user's shell rc and `.mcp.json` sends no `X-TLSRadar-Install` header (both removed in Round 6 for marketplace review — see below). `resolve_install_id` on the server still *accepts* the header if present, but the plugin doesn't send it. Opt out: delete the file. **There is no longer any `BEACON_PLUGIN_TOKEN` / `BEACON_BASE_URL` in the plugin** - those moved server-side to Rails.
 
 Rails (server): `BEACON_PLUGIN_TOKEN_PUBLIC` (Beacon MCP token for the proxy), `BEACON_BASE_URL` (default `https://beacon.tlsradar.com`), `BEACON_NOTIFY_SECRET` (verifies the issuance push; = Beacon's `TLSRADAR_NOTIFY_SECRET`).
 
@@ -168,12 +168,14 @@ Both are written so a model reading the skill mid-conversation chooses the right
 
 ## The hook
 
-`hooks/hooks.json` runs once at SessionStart when `~/.config/tlsradar/welcomed.rev1` doesn't exist. It:
-1. Mints the anonymous `~/.config/tlsradar/install_id` if absent.
-2. **Activates funnel attribution by default** - idempotently appends `export TLSRADAR_INSTALL_ID=<id>` (behind a `# tlsradar-install-id` marker) to the user's shell rc (`~/.zshrc` / `~/.bashrc` / `~/.profile`, chosen from `$SHELL`). From the next shell on, `.mcp.json` interpolates the id into the `X-TLSRadar-Install` header with no user action. The welcome discloses this and tells the user to delete that line to opt out. (`.mcp.json` only does env interpolation, so the rc export is the only way to make attribution on-by-default; the previous "export it yourself to activate" left ~all installs unattributed.)
-3. Migrates old v0.1.0 credentials (the deleted Go binary stored them at the same path), then touches the flag file.
+**`hooks/hooks.json` is a minimal show-once welcome.** Its command is exactly three steps — `mkdir -p ~/.config/tlsradar` (the plugin's OWN config dir), a `printf` welcome, and `touch …/welcomed.rev2` — gated by `! test -f ${HOME}/.config/tlsradar/welcomed.rev2`. Two trivial writes (mkdir + the flag), both inside the plugin's config dir; nothing else.
 
-**Welcome flag is decoupled from the plugin version (deliberate - item #5).** The flag is `welcomed.revN`, NOT `welcomed.v<semver>`. Bump `revN` (→ `welcomed.rev2`, and the matcher + `touch` in `hooks.json`) ONLY when a release materially changes how users interact - so routine semver bumps (bugfixes, backend-only changes) don't re-show the welcome and train users to dismiss it. The plugin version in the welcome *text* can track semver freely; only the *flag* is rev-gated.
+Deliberate marketplace hardening (Round 7): SessionStart hooks that auto-write/delete files are the single highest screening risk, so everything *scary* is gone — **no `openssl`, no `mv …/credentials.json` (the legacy migration that never fired for marketplace installs), no `rm` cleanups, no shell-rc edit, no env export.** A flag `touch` in the plugin's own dir is far below any screening concern and is what gives show-once (a print-only hook regressed into re-showing the promo banner every session — don't do that).
+- The **install-id mint lives in the commands**, not the hook: `/tls-scan` and `/tls-cert` read `~/.config/tlsradar/install_id`, pass it as `client_id`, and persist the server-returned id there if absent. (Hence `/tls-scan` has `allowed-tools: Read, Write`.) The hook does NOT create `install_id`.
+- The banner claims "**never touches your shell config**" — the accurate, trust-relevant claim. Don't claim "no files changed" (the commands write `install_id`, `config.json`, and certs under `certs/`).
+- **Never reintroduce the rc-export** (Round 4 #13, removed in Round 6) **or any hook write beyond the flag/mkdir** "to improve attribution/onboarding" — it's the behavior most likely to fail review.
+
+**Welcome flag is decoupled from the plugin version (deliberate).** The flag is `welcomed.revN`, NOT `welcomed.v<semver>`. Bump `revN` (matcher + `touch` in `hooks.json`) ONLY when a release materially changes how users interact, so routine semver bumps don't re-show the welcome and train users to dismiss it.
 
 ## Release process
 
@@ -212,10 +214,10 @@ These spanned the [tls_radar](https://github.com/TLS-Radar/tls_radar) (Rails) an
 
 ### Round 4 - attribution on by default, funnel-as-data, graceful degradation, live contract check (shipped)
 
-13. **Funnel attribution is on by default (#1).** The SessionStart hook now idempotently appends `export TLSRADAR_INSTALL_ID=<id>` (behind a `# tlsradar-install-id` marker) to the user's shell rc, so `.mcp.json`'s `X-TLSRadar-Install` header is populated from the next shell on with zero user action. Previously the id was minted but required a manual `export`, so ~all installs were unattributed. Welcome discloses it; delete the line to opt out.
+13. **Funnel attribution is on by default (#1).** ⚠️ **SUPERSEDED by Round 6 #23 — this rc-export + header behavior was REMOVED; do not reintroduce it.** (Historical:) the SessionStart hook appended `export TLSRADAR_INSTALL_ID=<id>` (behind a `# tlsradar-install-id` marker) to the user's shell rc, so `.mcp.json`'s `X-TLSRadar-Install` header was populated from the next shell on. It failed the marketplace-review bar (modifying shell config + on-by-default tracking header); attribution now rides on the `client_id` arg instead.
 14. **Welcome flag decoupled from semver (#5).** Flag is `welcomed.revN`, not `welcomed.v<semver>`. Routine releases no longer re-show the welcome - bump `revN` only on material interaction changes. See "The hook".
 15. **Funnel behavior moved from prose to server data (#2).** `BillingServices::UpgradeNudge` computes the upgrade-nudge decision server-side (at-cap / expiring-volume thresholds, only when a higher tier exists) and `monitor_list`/`expiring` return it as `structuredContent.nudge`; `cert_finalize` returns `structuredContent.handoff`. The skill's old prose thresholds ("3+ expiring", "1/1 used") are gone - it now just surfaces the `nudge`/`handoff` fields when present. `LimitReachedPayload#upgrade_path` is the shared tier source (parameterized `utm_content` so nudges attribute separately). Tested in `upgrade_nudge_spec.rb`.
-16. **Graceful degradation when Beacon is down (#4).** `Beacon::Client::Unavailable < Error` is raised on connection/timeout, 5xx, and not-configured (4xx stays a plain `Error`). The `cert_*` tools rescue `Unavailable` → `beacon_unavailable_result` (a friendly "briefly unavailable, scanning still works" message with `structuredContent.degraded/retryable`), so a Beacon blip at the funnel's value moment doesn't read as the plugin being broken. `/tls-cert`, `/tls-diagnose`, and the skill handle the `degraded` flag. Tested in `client_spec.rb` + `cert_tools_spec.rb`.
+16. **Graceful degradation when Beacon is down (#4).** `Beacon::Client::Unavailable < Error` is raised on connection/timeout, 5xx, and not-configured (4xx stays a plain `Error`). The `cert_*` tools rescue `Unavailable` → `beacon_unavailable_result` (a friendly "briefly unavailable, scanning still works" message with `structuredContent.degraded/retryable`), so a Beacon blip at the moment of issuance doesn't read as the plugin being broken. `/tls-cert`, `/tls-diagnose`, and the skill handle the `degraded` flag. Tested in `client_spec.rb` + `cert_tools_spec.rb`.
 17. **Live Beacon contract check (#3).** `scripts/verify_beacon_contract.py` calls Beacon's live `tools/list` and asserts every name in the manifest's `beacon` section still exists - makes the "a human remembers to check tools/list" step executable. Runs as a **non-blocking** CI job (`beacon-contract`, `continue-on-error`) because it needs the network + a token; only real drift (exit 1) is worth attention, inconclusive (exit 2) is ignored.
 
 ### Round 5 - contract-as-artifact, resume tokens, provider helper, accretion cleanup (shipped)
@@ -226,11 +228,15 @@ These spanned the [tls_radar](https://github.com/TLS-Radar/tls_radar) (Rails) an
 21. **Server-minted install id + `client_id` arg (#4).** `resolve_install_id` (in `McpServices::Tool`) resolves the funnel id in order: sanitized header → `client_id` arg (lets the plugin pass its local id with NO shell export - closes the env-timing gap of Round 4 #13) → freshly minted. `scan`/`cert_create` echo the effective `install_id` so the plugin can persist a minted one. Format (`/\A[0-9a-f]{32}\z/`) enforced at the header boundary AND on the arg - the id flows into analytics distinct_ids, so attacker garbage is rejected (#6).
 22. **Accretion cleanup (#5).** `store.Challenge`'s misleadingly-named `RecordName`/`RecordValue` Go fields are now neutral `Name`/`Value` (JSON was already `name`/`value`), with a doc comment that their meaning follows `Order.ChallengeType`. The redundant per-order webhook handoff enqueue is removed - `Webhooks::BeaconController` only projects `latest_state` now; the signed `certificate_issued` push is the genuinely sole handoff channel (dead `HANDOFF_STATES` const deleted).
 
+### Round 6 - marketplace-safe attribution (supersedes Round 4 #13)
+
+23. **Attribution no longer touches the shell rc, and no tracking header is sent by default.** A marketplace safety screen flags plugins that modify shell config files and send a tracking header on-by-default — exactly what Round 4 #13 did. Both are removed: the SessionStart hook only mints `~/.config/tlsradar/install_id` (no rc append), and `.mcp.json` no longer carries the `X-TLSRadar-Install` header. Attribution now rides solely on the Round 5 #21 `client_id` path — `scan`/`cert_create` read the local file and pass it as an argument — so it keeps working with none of the review-risky behavior. Opt out = delete the file. (Server-side `resolve_install_id` still accepts the header for back-compat; the plugin just doesn't send one.)
+
 ### Still open / future work
 
 - **Issuance is unauthenticated by design - not gated.** `cert_*` is public so anonymous users can issue (the funnel). We deliberately do NOT hard-gate on the install-id: it's a client-set header, trivially forged, so gating on it would be security theater that also dents conversion. Abuse control stays where it can't be faked: Beacon's per-IP rate limiter (`internal/ratelimit`) and Rails-layer throttling. If issuance abuse becomes real, add a proof-of-work or account requirement, not an install-id gate.
 - **Add a `beacon.health` tool.** `/tls-diagnose` infers Beacon reachability from a `cert_status` probe (now reading the `degraded` flag). A dedicated health/ping tool would still be cleaner.
-- **Funnel instrumentation is partial.** Install-id activation is now on by default (Round 4 #13), but signup attribution still isn't joined up end-to-end (install-id → signup → subscription).
+- **Funnel instrumentation is partial.** Attribution rides on the `client_id` arg the commands pass (Round 6), but it depends on the model actually reading the file and passing it, and signup attribution still isn't joined up end-to-end (install-id → signup → subscription).
 - **`--llm` eval is opt-in.** Static coverage runs in CI; the model-routing check needs `ANTHROPIC_API_KEY`.
 - **Beacon orders TTL vs renew.** Beacon purges orders ~24h after creation, so `cert_renew(order_id)` rarely applies at real renewal time; `/tls-renew` falls back to `cert_create`. (Resume tokens, Round 5 #19, now let a *single* in-flight order be finalized past the purge, but renew-by-domain still needs durable history.)
 - **HTTP-01 needs port 80 reachable** by Let's Encrypt and is apex-only - document this to users; dns-01 remains the default for good reason.

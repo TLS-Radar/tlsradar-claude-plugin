@@ -35,7 +35,7 @@ Call `tlsradar.cert_status` with a deliberately non-existent `order_id` like `he
 
 Report:
 - `TLSRADAR_BASE_URL`: its value or "(default: https://tlsradar.com)"
-- `TLSRADAR_INSTALL_ID`: "set" or "(unset - anonymous funnel attribution off; harmless)"
+- `~/.config/tlsradar/install_id` (the anonymous usage id the scan/cert commands pass as `client_id`): "present (anonymous usage id active)" if the file exists, else "(absent - attribution off; harmless)". The id lives only in this file - the plugin uses no env var or header for it.
 
 ## Output format
 
