@@ -43,13 +43,14 @@ Add server / connect GitHub; it's a remote server (Streamable HTTP URL above).
 ### 4. mcp.directory — TODO (form)
 Submit at https://mcp.directory/submit with the shared metadata.
 
-### 5. PulseMCP / Glama — AUTO
-Both pull from the official registry; expect them to appear after step A.1. No separate action (can nudge via their submit form if slow).
+### 5. PulseMCP / Glama
+- **PulseMCP** — AUTO: pulls from the official registry; expect it after the registry publish.
+- **Glama** — TODO (submit + Dockerfile bridge): Glama scores servers by starting them in Docker and introspecting. TLS Radar is remote-hosted, so the repo ships a thin bridge [`Dockerfile`](../Dockerfile) (`mcp-remote` → `https://tlsradar.com/api/v1/mcp`) that starts and passes introspection — verified locally (17 tools listed). Submit at https://glama.ai/mcp/servers (provide the Dockerfile), and also list the hosted endpoint at https://glama.ai/mcp/connectors. Once Glama scores it, add the score badge to awesome-mcp-servers PR #8110.
 
-### 6. punkpeye/awesome-mcp-servers — TODO (PR)
-Add under the **Security** category, alphabetical, format `- [name](url) <scope emoji> - desc`:
+### 6. punkpeye/awesome-mcp-servers — DONE (PR #8110)
+Entry added under **Security** (alphabetical, `💎 ☁️`). Pending: add the Glama score badge after the description once Glama scores the server (see #5):
 ```
-- [TLS Radar](https://tlsradar.com/cli) ☁️ - SSL/TLS scanning, free Let's Encrypt issuance (private key stays local), and certificate-expiry monitoring over MCP.
+[![TLS-Radar/tlsradar-claude-plugin MCP server](https://glama.ai/mcp/servers/TLS-Radar/tlsradar-claude-plugin/badges/score.svg)](https://glama.ai/mcp/servers/TLS-Radar/tlsradar-claude-plugin)
 ```
 
 ## B. Claude plugin directories
