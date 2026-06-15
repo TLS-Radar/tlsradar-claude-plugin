@@ -23,17 +23,16 @@ Status legend: **LIVE** · **PENDING** · **TODO (form)** · **TODO (PR)** · **
 
 The MCP server is usable by any MCP client (Cursor, Cline, Windsurf, VS Code, …), so list it independently of the plugin.
 
-### 1. Official MCP Registry — TODO (CLI) — highest leverage
-`server.json` is ready at the repo root. Publishing here **auto-propagates to downstream aggregators** (PulseMCP, Glama, and others pull from the official registry).
+### 1. Official MCP Registry — AUTOMATED (CI) — highest leverage
+`.github/workflows/publish-mcp.yml` publishes `server.json` to the registry on every `vX.Y.Z` tag (which `release.yml` already creates on a version bump), keeping the registry version in lockstep with the release. Publishing here **auto-propagates to downstream aggregators** (PulseMCP, Glama, …), so this one workflow covers most of section A.
 
-```bash
-# 1. Install the publisher CLI (see https://modelcontextprotocol.io quickstart, e.g. `brew install mcp-publisher`)
-# 2. Authenticate the namespace, then publish, from the repo root (where server.json lives):
-mcp-publisher login dns --domain tlsradar.com   # add the printed TXT record (we own the domain)
-mcp-publisher publish
-```
-- Namespace `com.tlsradar/tlsradar` requires **DNS** auth (fitting — we run DNS/TLS). See the registry Authentication guide for exact `login dns` flags.
-- Simpler alternative: `mcp-publisher login github` (device flow). If you use this, change `name` in `server.json` to `io.github.TLS-Radar/tlsradar`.
+**One-time setup (DNS auth for the `com.tlsradar` namespace):**
+1. Generate an Ed25519 key pair (see the registry [Authentication guide](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx)).
+2. Publish the public key as a DNS **TXT record on `tlsradar.com`** (the host/value the guide prints).
+3. Add the private key (hex) as the repo secret **`MCP_PRIVATE_KEY`** (Settings → Secrets and variables → Actions).
+
+After that, every release publishes automatically. To publish on demand: run the workflow from the Actions tab (`workflow_dispatch`), or locally `mcp-publisher login dns --domain tlsradar.com && mcp-publisher publish` from the repo root.
+- Namespace is `com.tlsradar/tlsradar` (DNS-verified — fitting, we run DNS/TLS). Switching to GitHub-OIDC auth instead would mean renaming to `io.github.TLS-Radar/tlsradar`.
 
 ### 2. mcp.so — TODO (form)
 Submit at mcp.so (account). Paste the shared metadata + MCP URL.

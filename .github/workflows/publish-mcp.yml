@@ -1,0 +1,50 @@
+name: publish-mcp
+
+# Publishes server.json to the official MCP Registry (https://registry.modelcontextprotocol.io)
+# on every version tag. The `release` workflow already creates `vX.Y.Z` tags when
+# .claude-plugin/plugin.json's version is bumped, so this fires automatically after a release.
+# Downstream aggregators (PulseMCP, Glama, ...) pull from the official registry, so this single
+# publish propagates to them too - no per-aggregator automation needed.
+#
+# ONE-TIME SETUP (see docs/DISTRIBUTION.md):
+#   1. Generate an Ed25519 key pair and publish the public key as a DNS TXT record on
+#      tlsradar.com, per the registry Authentication guide (DNS auth for the com.tlsradar namespace).
+#   2. Store the private key (hex) as the repo secret MCP_PRIVATE_KEY.
+# Until both are in place this workflow will fail at the login step (and only then) - nothing else breaks.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {} # allow a manual re-publish from the Actions tab
+
+permissions:
+  contents: read # DNS auth needs no id-token; just read the checked-out server.json
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          os=$(uname -s | tr '[:upper:]' '[:lower:]')
+          arch=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
+          curl -fsSL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_${os}_${arch}.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --version || true
+
+      # Keep the published registry version in lockstep with the release tag (v0.5.2 -> 0.5.2),
+      # so each release publishes a new, monotonically increasing version the registry accepts.
+      - name: Set server.json version from tag
+        if: github.ref_type == 'tag'
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          tmp=$(mktemp)
+          jq --arg v "$v" '.version = $v' server.json > "$tmp" && mv "$tmp" server.json
+          echo "server.json version set to $v"
+
+      - name: Authenticate (DNS namespace com.tlsradar)
+        run: ./mcp-publisher login dns --domain tlsradar.com --private-key "${{ secrets.MCP_PRIVATE_KEY }}"
+
+      - name: Publish to the MCP Registry
+        run: ./mcp-publisher publish
