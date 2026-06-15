@@ -1,6 +1,14 @@
 # TLS Radar plugin for Claude Code & Cowork
 
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-7c3aed)](https://github.com/TLS-Radar/tlsradar-claude-plugin)
+
 Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monitoring from inside Claude Code or Claude Cowork - through a single MCP server, with nothing to configure.
+
+Independent monitoring from a vendor that doesn't sell certificates - built for the 90-day-cert era, where manual renewal tracking is already finished.
+
+![Issuing a free cert with /tls-cert](docs/demo.gif)
+<!-- TODO: 30-60s asciinema -> GIF of /tls-cert issuing a real cert end to end. Drop the file at docs/demo.gif -->
 
 ```
 # Public - no account, no setup
@@ -16,6 +24,8 @@ Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monito
 /tls-diagnose                               # health check (use when something's off)
 /tls-upgrade                                # open pricing page
 ```
+
+> **See real output before installing:** [sample scan report](https://tlsradar.com/scan/7yeRj83mGGhcuhe5rSbXZg)
 
 Other actions - "what's expiring soon," "scan history for X," "what plan am I on," "export/import my monitors," "invite a teammate" - just ask in plain language; the plugin's skill routes them to the right tool. No slash command needed.
 
