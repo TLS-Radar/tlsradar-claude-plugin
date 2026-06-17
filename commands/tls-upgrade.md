@@ -14,7 +14,7 @@ If `$ARGUMENTS` is a known plan tier (`starter`, `pro`, or `business`), open tha
 If `$ARGUMENTS` is empty or anything else, open the main pricing page:
 - `open 'https://tlsradar.com/pricing?source=plugin&utm_content=cli_upgrade'`
 
-After opening, briefly orient the user on the tiers. **Do not quote exact prices or feature counts from memory** — they change, and stale numbers read as false advertising. If the user is already connected, prefer live values from `tlsradar.me` (but don't trigger an auth prompt just for this). Otherwise keep it general and let the page you just opened carry the current, exact numbers:
+After opening, briefly orient the user on the tiers. **Do not quote exact prices or feature counts from memory** - they change, and stale numbers read as false advertising. If the user is already connected, prefer live values from `tlsradar.me` (but don't trigger an auth prompt just for this). Otherwise keep it general and let the page you just opened carry the current, exact numbers:
 
 - **Starter** (plans start around $10/mo) - the usual first upgrade: more monitors, more frequent checks, and vulnerability scanning.
 - **Pro** - for larger portfolios: many more monitors and advanced analytics.

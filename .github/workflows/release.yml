@@ -50,7 +50,7 @@ jobs:
         run: |
           if git rev-parse "v${VERSION}" >/dev/null 2>&1; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag v${VERSION} already exists — nothing to do."
+            echo "Tag v${VERSION} already exists - nothing to do."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
@@ -65,7 +65,7 @@ jobs:
             echo "have_notes=true" >> "$GITHUB_OUTPUT"
           else
             echo "have_notes=false" >> "$GITHUB_OUTPUT"
-            echo "No CHANGELOG section — will fall back to auto-generated notes."
+            echo "No CHANGELOG section - will fall back to auto-generated notes."
           fi
 
       - name: Create tag and release

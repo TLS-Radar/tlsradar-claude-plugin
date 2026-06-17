@@ -2,6 +2,7 @@
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-7c3aed)](https://github.com/TLS-Radar/tlsradar-claude-plugin)
+[![smithery badge](https://smithery.ai/badge/slmusayev/tls-radar)](https://smithery.ai/servers/slmusayev/tls-radar)
 
 Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monitoring from inside Claude Code or Claude Cowork - through a single MCP server, with nothing to configure.
 
@@ -93,7 +94,7 @@ Nothing is required. Optional environment variables:
 
 - `TLSRADAR_BASE_URL` - override the TLS Radar URL (default `https://tlsradar.com`). Useful for staging/self-host.
 
-**Anonymous usage id.** On first run the plugin mints a random id at `~/.config/tlsradar/install_id` and the scan/cert commands pass it (as a `client_id` argument) so anonymous usage can be attributed to one install. It identifies an install, not a person. The plugin **does not modify your shell config and sends no tracking header** — the id travels only as that argument, read from the local file.
+**Anonymous usage id.** On first run the plugin mints a random id at `~/.config/tlsradar/install_id` and the scan/cert commands pass it (as a `client_id` argument) so anonymous usage can be attributed to one install. It identifies an install, not a person. The plugin **does not modify your shell config and sends no tracking header** - the id travels only as that argument, read from the local file.
 
   **To opt out:** `rm ~/.config/tlsradar/install_id`. With the file gone, no id is sent.
 

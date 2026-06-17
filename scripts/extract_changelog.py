@@ -5,7 +5,7 @@ Usage:
     python3 scripts/extract_changelog.py 0.4.0
 
 Prints everything under the `## [0.4.0] ...` heading up to (but not including)
-the next `## [` heading. The heading line itself is omitted — the release title
+the next `## [` heading. The heading line itself is omitted - the release title
 already carries the version. Exit codes:
 
     0  section found and printed

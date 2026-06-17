@@ -30,7 +30,7 @@ The Beacon `challenge` value is `http-01` for `http-01`, otherwise `dns-01` (all
 
 ## 2. Start the order
 
-You'll need the user's email. When you ask for it (or before using one from context), tell them plainly what it's for: **the Let's Encrypt order, and a one-time follow-up email from TLS Radar about monitoring this certificate's expiry. No marketing unless they opt in.** Only set `marketing_consent: true` if they explicitly ask for it (default is off — keep it off).
+You'll need the user's email. When you ask for it (or before using one from context), tell them plainly what it's for: **the Let's Encrypt order, and a one-time follow-up email from TLS Radar about monitoring this certificate's expiry. No marketing unless they opt in.** Only set `marketing_consent: true` if they explicitly ask for it (default is off - keep it off).
 
 Read `${HOME}/.config/tlsradar/install_id` if it exists. Call `tlsradar.cert_create` with `domain=$ARGUMENTS`, `email`, `challenge` (`dns-01` or `http-01`), and `client_id` = that install id (for anonymous funnel attribution; omit if the file is absent). It returns `order_id`, either `dns_records` or `http_files`, a `resume_token`, and an `install_id`.
 

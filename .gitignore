@@ -39,3 +39,6 @@ certs/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# --- Private distribution playbook (local-only marketing notes, not shipped) ---
+docs/DISTRIBUTION.md

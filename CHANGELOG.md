@@ -39,14 +39,14 @@ config or sends a tracking header.
 
 > **Upgrading from 0.4.0:** 0.4.0 added an `export TLSRADAR_INSTALL_ID=…` line
 > (under a `# tlsradar-install-id` comment) to your shell rc. The new hook
-> neither adds nor removes it — removing it would mean editing your shell
+> neither adds nor removes it - removing it would mean editing your shell
 > config again, the very thing we stopped doing. The line is now harmless (the
 > header that read it is gone), but you can delete those two lines yourself.
 
 ### Changed
 - **Attribution now rides on a tool argument.** `/tls-scan` and `/tls-cert`
   read the install id from `~/.config/tlsradar/install_id` and pass it as a
-  `client_id` argument — same anonymous, per-install signal, with no shell
+  `client_id` argument - same anonymous, per-install signal, with no shell
   changes and no header. Opt out by deleting that file.
 - **`/tls-cert` now states what your email is used for** when it's collected:
   the Let's Encrypt order and a one-time monitoring follow-up (marketing stays
@@ -69,7 +69,7 @@ The single-MCP-server, key-stays-local, funnel-attribution release.
 ### Added
 - **Anonymous funnel attribution.** The SessionStart hook mints an install id
   at `~/.config/tlsradar/install_id`. (0.4.0 also exported it via a shell-rc
-  line; that was removed in 0.5.0 — see above.)
+  line; that was removed in 0.5.0 - see above.)
 - **HTTP-01 and DNS-01 challenges**, including provider automation
   (`dns-01-cloudflare`, `dns-01-route53`) via a tested local helper
   (`scripts/dns_provider.py`) that reads credentials from your local env only.
