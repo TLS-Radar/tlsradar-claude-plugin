@@ -1,17 +1,17 @@
-{"prompt": "scan the ssl on example.com", "expect": ["scan"]}
-{"prompt": "is example.com's certificate valid?", "expect": ["scan"]}
-{"prompt": "issue a free let's encrypt cert for mydomain.dev", "expect": ["cert_create"]}
-{"prompt": "I published the DNS records, are they live yet for order ord_123?", "expect": ["cert_check_propagation"]}
-{"prompt": "the TXT records are green, go ahead and issue the cert for order ord_123 with this CSR", "expect": ["cert_finalize"]}
-{"prompt": "what state is my cert order ord_123 in?", "expect": ["cert_status"]}
-{"prompt": "renew the certificate for mydomain.dev", "expect": ["cert_create", "cert_renew"]}
-{"prompt": "start monitoring api.foo.io for expiry", "expect": ["monitor_add"]}
-{"prompt": "watch these three domains: a.com b.com c.com", "expect": ["monitor_add_bulk"]}
-{"prompt": "what domains am I currently monitoring?", "expect": ["monitor_list"]}
-{"prompt": "stop monitoring api.foo.io", "expect": ["monitor_remove"]}
-{"prompt": "which of my certs are expiring soon?", "expect": ["expiring"]}
-{"prompt": "show me the recent scan history for mydomain.dev", "expect": ["scan_history"]}
-{"prompt": "what plan am I on and how many monitors have I used?", "expect": ["me"]}
-{"prompt": "export all my monitored domains to a file", "expect": ["export"]}
-{"prompt": "import my monitors from this backup json", "expect": ["import"]}
-{"prompt": "invite teammate@example.com to my team", "expect": ["team_invite"]}
+{"prompt": "scan the ssl on example.com", "expect": ["scan_domain"]}
+{"prompt": "is example.com's certificate valid?", "expect": ["scan_domain"]}
+{"prompt": "issue a free let's encrypt cert for mydomain.dev", "expect": ["create_certificate"]}
+{"prompt": "I published the DNS records, are they live yet for order ord_123?", "expect": ["check_certificate_propagation"]}
+{"prompt": "the TXT records are green, go ahead and issue the cert for order ord_123 with this CSR", "expect": ["finalize_certificate"]}
+{"prompt": "what state is my cert order ord_123 in?", "expect": ["get_certificate_status"]}
+{"prompt": "renew the certificate for mydomain.dev", "expect": ["create_certificate", "renew_certificate"]}
+{"prompt": "start monitoring api.foo.io for expiry", "expect": ["add_monitor"]}
+{"prompt": "watch these three domains: a.com b.com c.com", "expect": ["add_monitors"]}
+{"prompt": "what domains am I currently monitoring?", "expect": ["list_monitors"]}
+{"prompt": "stop monitoring api.foo.io", "expect": ["remove_monitor"]}
+{"prompt": "which of my certs are expiring soon?", "expect": ["list_expiring_certificates"]}
+{"prompt": "show me the recent scan history for mydomain.dev", "expect": ["get_scan_history"]}
+{"prompt": "what plan am I on and how many monitors have I used?", "expect": ["get_account"]}
+{"prompt": "export all my monitored domains to a file", "expect": ["export_monitors"]}
+{"prompt": "import my monitors from this backup json", "expect": ["import_monitors"]}
+{"prompt": "invite teammate@example.com to my team", "expect": ["invite_team_member"]}
