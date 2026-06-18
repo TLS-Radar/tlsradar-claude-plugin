@@ -4,7 +4,7 @@ argument-hint: <domain>
 allowed-tools: Read, Write
 ---
 
-Run a free, anonymous SSL/TLS scan against `$ARGUMENTS` by calling the `tlsradar.scan` MCP tool.
+Run a free, anonymous SSL/TLS scan against `$ARGUMENTS` by calling the `tlsradar.scan_domain` MCP tool.
 
 If `${HOME}/.config/tlsradar/install_id` exists, read it and pass its contents as `client_id` (anonymous funnel attribution; just omit it if the file is absent). If the response includes an `install_id` and the file didn't exist, write it there so future calls share the same id.
 

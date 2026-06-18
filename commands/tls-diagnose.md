@@ -10,14 +10,14 @@ The plugin talks to a single MCP server (`tlsradar`); certificate issuance is pr
 
 ### 1. TLS Radar reachability (public tools)
 
-Call `tlsradar.scan` with `domain=example.com` to verify the public MCP endpoint responds.
+Call `tlsradar.scan_domain` with `domain=example.com` to verify the public MCP endpoint responds.
 
 - **Success:** "✓ TLS Radar MCP is reachable (public tools work)"
 - **Connection error:** "✗ Can't reach tlsradar.com - check the TLSRADAR_BASE_URL environment variable and your network"
 
 ### 2. TLS Radar authentication
 
-Call `tlsradar.me` (requires auth).
+Call `tlsradar.get_account` (requires auth).
 
 - **Success:** "✓ Authenticated as `<email>` (`<plan>` plan, `<used>/<limit>` monitors used)"
 - **401 / unauthorized:** "✗ Not connected. Run `/mcp`, pick the `tlsradar` server, and approve OAuth in your browser. (Scanning and cert issuance still work without this.)"
@@ -25,7 +25,7 @@ Call `tlsradar.me` (requires auth).
 
 ### 3. Certificate issuance path (proxy → Beacon)
 
-Call `tlsradar.cert_status` with a deliberately non-existent `order_id` like `health-check-probe`. This proxies through to Beacon without creating anything.
+Call `tlsradar.get_certificate_status` with a deliberately non-existent `order_id` like `health-check-probe`. This proxies through to Beacon without creating anything.
 
 - **Returns an "order not found" (or similar) error WITHOUT `structuredContent.degraded`:** "✓ Certificate issuance is reachable" (Beacon answered - it just doesn't know that order)
 - **Returns `structuredContent.degraded: true` (the proxy's graceful-degradation response):** "⚠ The certificate backend is briefly unavailable - `/tls-cert` will fail right now. This is server-side and transient; try again in a minute."
