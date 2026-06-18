@@ -4,7 +4,7 @@ argument-hint: <domain>
 allowed-tools: Bash(openssl*), Bash(python3 *dns_provider.py*), Bash(mkdir -p *tlsradar*), Read, Write
 ---
 
-Issue a free SSL/TLS certificate from Let's Encrypt for `$ARGUMENTS`, entirely through the TLS Radar MCP server's `cert_*` tools. The private key is generated **locally** and never leaves the machine.
+Issue a free SSL/TLS certificate from Let's Encrypt for `$ARGUMENTS`, entirely through the TLS Radar MCP server's certificate tools. The private key is generated **locally** and never leaves the machine.
 
 ## 1. Choose the validation (challenge) method
 
@@ -32,11 +32,11 @@ The Beacon `challenge` value is `http-01` for `http-01`, otherwise `dns-01` (all
 
 You'll need the user's email. When you ask for it (or before using one from context), tell them plainly what it's for: **the Let's Encrypt order, and a one-time follow-up email from TLS Radar about monitoring this certificate's expiry. No marketing unless they opt in.** Only set `marketing_consent: true` if they explicitly ask for it (default is off - keep it off).
 
-Read `${HOME}/.config/tlsradar/install_id` if it exists. Call `tlsradar.cert_create` with `domain=$ARGUMENTS`, `email`, `challenge` (`dns-01` or `http-01`), and `client_id` = that install id (for anonymous funnel attribution; omit if the file is absent). It returns `order_id`, either `dns_records` or `http_files`, a `resume_token`, and an `install_id`.
+Read `${HOME}/.config/tlsradar/install_id` if it exists. Call `tlsradar.create_certificate` with `domain=$ARGUMENTS`, `email`, `challenge` (`dns-01` or `http-01`), and `client_id` = that install id (for anonymous funnel attribution; omit if the file is absent). It returns `order_id`, either `dns_records` or `http_files`, a `resume_token`, and an `install_id`.
 
 **Keep two things from the response for later:** the `resume_token` (lets you finalize even if the order is interrupted for a day) and the `install_id` - if `~/.config/tlsradar/install_id` didn't exist, write the returned `install_id` there so future calls are attributed to the same install.
 
-**If any `cert_*` call returns `structuredContent.degraded: true`** (the certificate backend is briefly unavailable - server-side and transient), don't treat it as a hard failure or retry in a loop: relay the friendly message, note that `/tls-scan` still works, and suggest trying again in a minute. This can happen at any step below.
+**If any certificate-tool call returns `structuredContent.degraded: true`** (the certificate backend is briefly unavailable - server-side and transient), don't treat it as a hard failure or retry in a loop: relay the friendly message, note that `/tls-scan` still works, and suggest trying again in a minute. This can happen at any step below.
 
 ## 3. Put the challenge in place
 
@@ -55,7 +55,7 @@ Credentials are read from the local environment by the helper (`CLOUDFLARE_API_T
 
 ## 4. Wait for propagation
 
-Poll `tlsradar.cert_check_propagation` with `order_id` until `all_found` is `true`. Don't finalize before it's green.
+Poll `tlsradar.check_certificate_propagation` with `order_id` until `all_found` is `true`. Don't finalize before it's green.
 
 ## 5. Generate a CSR locally, then finalize
 
@@ -71,7 +71,7 @@ openssl req -new -newkey rsa:2048 -nodes \
 # http-01 (apex only): drop the ,DNS:www.$ARGUMENTS from subjectAltName
 ```
 
-Read the `.csr` and call `tlsradar.cert_finalize` with `order_id` + `csr_pem` (and the `resume_token` from step 2 - harmless normally, and the only way to finish if Beacon purged the order after a long gap). It validates, waits briefly, and issues, returning `fullchain_pem`. If it replies "still validating," re-run `tlsradar.cert_check_propagation`, then `tlsradar.cert_finalize` again - **safe to retry** (a completed order returns the same chain, never re-issues).
+Read the `.csr` and call `tlsradar.finalize_certificate` with `order_id` + `csr_pem` (and the `resume_token` from step 2 - harmless normally, and the only way to finish if Beacon purged the order after a long gap). It validates, waits briefly, and issues, returning `fullchain_pem`. If it replies "still validating," re-run `tlsradar.check_certificate_propagation`, then `tlsradar.finalize_certificate` again - **safe to retry** (a completed order returns the same chain, never re-issues).
 
 ## 6. Save the certificate
 
@@ -90,7 +90,7 @@ If they want the files in their project dir, have them `.gitignore` `*.key *.p12
 
 ## After issuance
 
-The cert → monitoring handoff is automatic and server-side. `cert_finalize`'s response carries a `handoff` object - relay `structuredContent.handoff.message` to the user and **don't** add the monitor manually.
+The cert → monitoring handoff is automatic and server-side. `finalize_certificate`'s response carries a `handoff` object - relay `structuredContent.handoff.message` to the user and **don't** add the monitor manually.
 
 ## Cleanup & notes
 

@@ -38,7 +38,7 @@ Claude Code's MCP client talks to **one** remote server:
 
 Certificate issuance is **proxied through that server** to the Let's Encrypt backend (Beacon), so there's a single connection and a single auth model - no second server, no token to paste into your shell.
 
-- **Public tools** (`scan`, `cert_create`, `cert_check_propagation`, `cert_finalize`, `cert_status`, `cert_renew`) work with no account.
+- **Public tools** (`scan`, `create_certificate`, `check_certificate_propagation`, `finalize_certificate`, `get_certificate_status`, `renew_certificate`) work with no account.
 - **Authenticated tools** (monitoring, plan info, export/import, team) use Claude Code's built-in OAuth 2.0 + PKCE. Run `/mcp` once, pick the `tlsradar` server, approve in the browser; the token is managed by Claude Code.
 
 When you run `/mcp`, Claude Code fetches `tlsradar.com/.well-known/oauth-authorization-server` (RFC 8414), dynamically registers as a public client (RFC 7591), opens the browser for consent (PKCE / RFC 7636), and includes the token on subsequent requests automatically.

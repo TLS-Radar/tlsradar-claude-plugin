@@ -8,10 +8,10 @@ Renew the Let's Encrypt certificate for `$ARGUMENTS`. Renewal issues a fresh 90-
 
 ## Flow
 
-`tlsradar.cert_renew` clones an existing order by its **`order_id`**, and orders are purged ~24h after creation - so months later at renewal time there's usually no order to clone. Two cases:
+`tlsradar.renew_certificate` clones an existing order by its **`order_id`**, and orders are purged ~24h after creation - so months later at renewal time there's usually no order to clone. Two cases:
 
-- **No `order_id` (the normal case):** just run a fresh issuance - it *is* the renewal. Follow `/tls-cert` exactly: `tlsradar.cert_create(domain=$ARGUMENTS, email=…)` → publish TXT → `tlsradar.cert_check_propagation` until green → generate a CSR locally → `tlsradar.cert_finalize(order_id, csr_pem)`.
-- **User still has a recent `order_id`:** call `tlsradar.cert_renew` with it to get a fresh order + new TXT records, then continue from the propagation step as above.
+- **No `order_id` (the normal case):** just run a fresh issuance - it *is* the renewal. Follow `/tls-cert` exactly: `tlsradar.create_certificate(domain=$ARGUMENTS, email=…)` → publish TXT → `tlsradar.check_certificate_propagation` until green → generate a CSR locally → `tlsradar.finalize_certificate(order_id, csr_pem)`.
+- **User still has a recent `order_id`:** call `tlsradar.renew_certificate` with it to get a fresh order + new TXT records, then continue from the propagation step as above.
 
 Either way the private key is generated locally (CSR path) and the monitoring handoff fires automatically when the cert completes - you do not register anything.
 
@@ -22,5 +22,5 @@ If the user runs an expiry check and any entry shows < 30 days remaining, sugges
 ## Things this command should NOT do
 
 - Don't renew an unrelated domain just because it's expiring - only act on `$ARGUMENTS`.
-- Don't call `tlsradar.cert_renew` with a domain - it takes an `order_id`. Without one, use `tlsradar.cert_create`.
+- Don't call `tlsradar.renew_certificate` with a domain - it takes an `order_id`. Without one, use `tlsradar.create_certificate`.
 - Don't tell the user to manually update monitoring afterward - the cert change is picked up on the next scheduled scan.
