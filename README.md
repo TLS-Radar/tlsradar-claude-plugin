@@ -59,6 +59,19 @@ When a cert is issued, TLS Radar emails you about ongoing monitoring - the cert 
 
 This is a standard plugin, so it runs in both **Claude Code** and **Claude Cowork**. Scanning, certificate issuance, and monitoring all work in either client: the tools come from one MCP server, and the certificate flow runs `openssl` plus a bundled helper script locally (both clients can run local commands and the bundled script via `${CLAUDE_PLUGIN_ROOT}`). Connecting for monitoring uses your client's built-in OAuth - `/mcp` in Claude Code, or the equivalent connect step in Cowork.
 
+### Use in Claude.ai (custom connector)
+
+You don't need Claude Code to use the scanning and monitoring tools. TLS Radar is a standard **remote** MCP server, so you can add it as a **custom connector** in the Claude.ai apps (web, desktop, mobile) on any plan - Free included (Free allows one connector).
+
+1. Open **Settings → Connectors** (Team/Enterprise: **Organization settings → Connectors**, Owner only).
+2. Click **Add custom connector**.
+3. Paste the server URL: `https://tlsradar.com/api/v1/mcp`
+4. Save. Scans work immediately with no account. For monitoring, approve the OAuth prompt the first time Claude calls an authenticated tool.
+
+Then just ask in plain language - "scan example.com", "what certs are expiring soon", "monitor api.foo.io". There are no slash commands in Claude.ai; the tool descriptions route your request.
+
+> **Certificate issuance stays a Claude Code / Cowork feature.** `/tls-cert` generates your private key locally with `openssl`, which the Claude.ai apps can't do (no local shell). In a connector you get scanning and monitoring; to issue a Let's Encrypt cert with the key staying on your machine, use the plugin in Claude Code/Cowork, or the web form at [beacon.tlsradar.com](https://beacon.tlsradar.com).
+
 ## Install
 
 In Claude Code, add the marketplace and install - two commands, no clone, no paths:
