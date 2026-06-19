@@ -61,14 +61,16 @@ This is a standard plugin, so it runs in both **Claude Code** and **Claude Cowor
 
 ### Use in Claude.ai (custom connector)
 
-You don't need Claude Code to use the scanning and monitoring tools. TLS Radar is a standard **remote** MCP server, so you can add it as a **custom connector** in the Claude.ai apps (web, desktop, mobile) on any plan - Free included (Free allows one connector).
+You don't need Claude Code to scan and monitor from Claude. TLS Radar is a standard **remote** MCP server, so you can add it as a **custom connector** in the Claude.ai apps (web, desktop, mobile) on any plan - Free included (Free allows one connector).
 
 1. Open **Settings → Connectors** (Team/Enterprise: **Organization settings → Connectors**, Owner only).
 2. Click **Add custom connector**.
-3. Paste the server URL: `https://tlsradar.com/api/v1/mcp`
-4. Save. Scans work immediately with no account. For monitoring, approve the OAuth prompt the first time Claude calls an authenticated tool.
+3. Paste the connector URL: `https://tlsradar.com/api/v1/mcp/connect`
+4. Save, then **sign in to TLS Radar** when the OAuth prompt appears (the connector is an authenticated surface - sign-in connects your account once, then scanning and monitoring both work).
 
 Then just ask in plain language - "scan example.com", "what certs are expiring soon", "monitor api.foo.io". There are no slash commands in Claude.ai; the tool descriptions route your request.
+
+> **No account? Use Claude Code instead.** The anonymous, no-signup scanning and free cert issuance live in the Claude Code plugin (below), which talks to the public `…/api/v1/mcp` endpoint. The Claude.ai connector requires a one-time sign-in because hosted connectors must authenticate.
 
 > **Certificate issuance stays a Claude Code / Cowork feature.** `/tls-cert` generates your private key locally with `openssl`, which the Claude.ai apps can't do (no local shell). In a connector you get scanning and monitoring; to issue a Let's Encrypt cert with the key staying on your machine, use the plugin in Claude Code/Cowork, or the web form at [beacon.tlsradar.com](https://beacon.tlsradar.com).
 
