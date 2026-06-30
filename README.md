@@ -8,8 +8,7 @@ Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monito
 
 Independent monitoring from a vendor that doesn't sell certificates - built for the 90-day-cert era, where manual renewal tracking is already finished.
 
-![Issuing a free cert with /tls-cert](docs/demo.gif)
-<!-- TODO: 30-60s asciinema -> GIF of /tls-cert issuing a real cert end to end. Drop the file at docs/demo.gif -->
+![Installing the plugin and issuing a free cert with /tls-cert](docs/demo.gif)
 
 ```
 # Public - no account, no setup
