@@ -26,7 +26,6 @@ CI (`.github/workflows/verify-contracts.yml`) runs all four on every PR. Run the
 | `.mcp.json` | The single MCP server config (one remote URL; no headers or tokens). |
 | `commands/*.md` | Slash commands. Each is a system prompt telling Claude which MCP tool to call and how to render the result. |
 | `skills/certificate-monitoring/SKILL.md` | The natural-language router - picks the right tool when there's no slash command. Its tool table is **generated** from the manifest. |
-| `hooks/hooks.json` | One-time SessionStart welcome (print only; touches no shell config). The anonymous install id is created by the scan/cert commands, not the hook. |
 | `tools/manifest.json` | **Single source of truth** for tool names (and the Beacon response fields the proxy reads). |
 | `scripts/` | CI guards and the tested DNS-provider helper. |
 | `evals/` | Prompt → expected-tool routing checks. |

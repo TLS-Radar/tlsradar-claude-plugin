@@ -76,5 +76,46 @@ class Route53ZonePick(unittest.TestCase):
         self.assertIsNone(dp.route53_zone_id_from_list([], "example.com"))
 
 
+class ValidateChallenge(unittest.TestCase):
+    TOK = "abcdefghijklmnopqrstuvwxyz0123456789_-ABCDEF"  # base64url-shaped
+
+    def test_apex_ok(self):
+        dp.validate_challenge("_acme-challenge.example.com", "example.com", self.TOK)
+
+    def test_www_subdomain_ok(self):
+        # /tls-cert issues apex + www, so this is the second real record.
+        dp.validate_challenge("_acme-challenge.www.example.com", "example.com", self.TOK)
+
+    def test_case_insensitive(self):
+        dp.validate_challenge("_ACME-Challenge.Example.COM", "example.com", self.TOK)
+        dp.validate_challenge("_acme-challenge.example.com", "EXAMPLE.com", self.TOK)
+
+    def test_trailing_dot_ok(self):
+        dp.validate_challenge("_acme-challenge.example.com.", "example.com", self.TOK)
+
+    def test_unrelated_zone_rejected(self):
+        # The core attack: server returns a record for a different zone the user owns.
+        with self.assertRaises(ValueError):
+            dp.validate_challenge("_acme-challenge.evil.com", "example.com", self.TOK)
+
+    def test_suffix_confusion_rejected(self):
+        # notexample.com must not pass as a subdomain of example.com.
+        with self.assertRaises(ValueError):
+            dp.validate_challenge("_acme-challenge.notexample.com", "example.com", self.TOK)
+
+    def test_missing_prefix_rejected(self):
+        with self.assertRaises(ValueError):
+            dp.validate_challenge("example.com", "example.com", self.TOK)
+
+    def test_bad_value_charset_rejected(self):
+        for bad in ['tok "with" quotes', "tok;rm -rf", "tok with space", "tok.with.dots", ""]:
+            with self.assertRaises(ValueError):
+                dp.validate_challenge("_acme-challenge.example.com", "example.com", bad)
+
+    def test_bad_domain_rejected(self):
+        with self.assertRaises(ValueError):
+            dp.validate_challenge("_acme-challenge.example.com", "", self.TOK)
+
+
 if __name__ == "__main__":
     unittest.main()

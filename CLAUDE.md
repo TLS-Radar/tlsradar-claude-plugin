@@ -26,8 +26,8 @@ There is no binary. The plugin is pure configuration + Markdown. Claude Code's M
 ├── README.md                          ← user-facing install + usage
 ├── .claude-plugin/plugin.json         ← plugin manifest (name, version, repo URL)
 ├── .claude-plugin/marketplace.json    ← self-hosting marketplace: `/plugin marketplace add TLS-Radar/tlsradar-claude-plugin` then `/plugin install tlsradar@tlsradar`
-├── .mcp.json                          ← MCP server config (ONE remote URL + install-id header)
-├── hooks/hooks.json                   ← SessionStart welcome + anonymous install-id mint (one-time)
+├── .mcp.json                          ← MCP server config (ONE remote URL; no headers)
+│   (no hooks/ dir - the SessionStart welcome hook was removed in Round 8; see "The hook")
 ├── tools/manifest.json                ← SINGLE SOURCE OF TRUTH for tool names + the beacon response `fields` the proxy reads
 ├── scripts/verify_tool_names.py       ← CI guard (offline): every tool ref is in the manifest
 ├── scripts/verify_beacon_contract.py  ← live check: Beacon still exposes the manifest's beacon tools AND fields (non-blocking CI)
@@ -134,7 +134,7 @@ The plugin no longer connects to `beacon.tlsradar.com/mcp` directly. `Beacon::Cl
 
 Plugin (user shell, interpolated by `.mcp.json` as `${VAR}` / `${VAR:-default}`):
 - `TLSRADAR_BASE_URL` - override the one MCP server URL for staging/self-host. Default `https://tlsradar.com`.
-- **Anonymous attribution does NOT use an env var or header.** The hook mints `~/.config/tlsradar/install_id`; the `scan`/`create_certificate` commands read that file and pass it as the `client_id` argument. The plugin never writes to the user's shell rc and `.mcp.json` sends no `X-TLSRadar-Install` header (both removed in Round 6 for marketplace review - see below). `resolve_install_id` on the server still *accepts* the header if present, but the plugin doesn't send it. Opt out: delete the file. **There is no longer any `BEACON_PLUGIN_TOKEN` / `BEACON_BASE_URL` in the plugin** - those moved server-side to Rails.
+- **Anonymous attribution does NOT use an env var or header.** The `scan`/`create_certificate` commands mint `~/.config/tlsradar/install_id` (there is no hook - Round 8), read that file, and pass it as the `client_id` argument. The plugin never writes to the user's shell rc and `.mcp.json` sends no `X-TLSRadar-Install` header (both removed in Round 6 for marketplace review - see below). `resolve_install_id` on the server still *accepts* the header if present, but the plugin doesn't send it. Opt out: delete the file. **There is no longer any `BEACON_PLUGIN_TOKEN` / `BEACON_BASE_URL` in the plugin** - those moved server-side to Rails.
 
 Rails (server): `BEACON_PLUGIN_TOKEN_PUBLIC` (Beacon MCP token for the proxy), `BEACON_BASE_URL` (default `https://beacon.tlsradar.com`), `BEACON_NOTIFY_SECRET` (verifies the issuance push; = Beacon's `TLSRADAR_NOTIFY_SECRET`).
 
@@ -167,19 +167,15 @@ Both are written so a model reading the skill mid-conversation chooses the right
 
 ## The hook
 
-**`hooks/hooks.json` is a minimal show-once welcome.** Its command is exactly three steps - `mkdir -p ~/.config/tlsradar` (the plugin's OWN config dir), a `printf` welcome, and `touch …/welcomed.rev2` - gated by `! test -f ${HOME}/.config/tlsradar/welcomed.rev2`. Two trivial writes (mkdir + the flag), both inside the plugin's config dir; nothing else.
+**There is no hook. The plugin ships no `hooks/` directory** (removed in Round 8). It previously had a single SessionStart show-once welcome that printed an onboarding banner and `touch`ed a `~/.config/tlsradar/welcomed.revN` flag. A buildwithclaude marketplace reviewer flagged *any* automatic home-directory write + automatic startup promo as a no-go, and "opt-in" isn't meaningful for a SessionStart hook, so the whole hook was dropped rather than neutered.
 
-Deliberate marketplace hardening (Round 7): SessionStart hooks that auto-write/delete files are the single highest screening risk, so everything *scary* is gone - **no `openssl`, no `mv …/credentials.json` (the legacy migration that never fired for marketplace installs), no `rm` cleanups, no shell-rc edit, no env export.** A flag `touch` in the plugin's own dir is far below any screening concern and is what gives show-once (a print-only hook regressed into re-showing the promo banner every session - don't do that).
-- The **install-id mint lives in the commands**, not the hook: `/tls-scan` and `/tls-cert` read `~/.config/tlsradar/install_id`, pass it as `client_id`, and persist the server-returned id there if absent. (Hence `/tls-scan` has `allowed-tools: Read, Write`.) The hook does NOT create `install_id`.
-- The banner claims "**never touches your shell config**" - the accurate, trust-relevant claim. Don't claim "no files changed" (the commands write `install_id`, `config.json`, and certs under `certs/`).
-- **Never reintroduce the rc-export** (Round 4 #13, removed in Round 6) **or any hook write beyond the flag/mkdir** "to improve attribution/onboarding" - it's the behavior most likely to fail review.
-
-**Welcome flag is decoupled from the plugin version (deliberate).** The flag is `welcomed.revN`, NOT `welcomed.v<semver>`. Bump `revN` (matcher + `touch` in `hooks.json`) ONLY when a release materially changes how users interact, so routine semver bumps don't re-show the welcome and train users to dismiss it.
+- Removing it costs only the one-time banner. **Attribution is unaffected**: the install-id mint already lives in the commands, not the hook - `/tls-scan` and `/tls-cert` read `~/.config/tlsradar/install_id`, pass it as `client_id`, and persist a server-returned id if absent (hence `/tls-scan` has `allowed-tools: Read, Write`). The config dir is created on demand by those commands (`mkdir -p`, or the Write tool creating parents).
+- **Don't reintroduce a SessionStart hook** "to improve onboarding/attribution" - an auto home-dir write and/or startup promo is exactly the marketplace-review failure that removed it (and, historically, the rc-export of Round 4 #13 that Round 6 already removed). Onboarding lives in the README and each command; attribution rides on the `client_id` arg.
 
 ## Release process
 
 1. Verify locally: `.mcp.json` interpolates correctly; all `tlsradar.*` names match production `tools/list`. Run `python3 scripts/verify_tool_names.py` and `python3 evals/run_evals.py` (CI runs both, offline/deterministic). For the Beacon side, run `python3 scripts/verify_beacon_contract.py` (needs `BEACON_PLUGIN_TOKEN_PUBLIC`) - it calls Beacon's live `tools/list` and asserts every name in the manifest's `beacon` section still exists, so the `cert_*` proxy dependency can't silently drift. CI runs it too, but as a **non-blocking** job (it needs the network + token; an inconclusive run is ignored, only real drift is surfaced). If a tool was renamed/added, update `tools/manifest.json` (and the `Beacon::Client` + `cert_*` tools on the Rails side for beacon renames) in the same PR.
-2. Bump `.claude-plugin/plugin.json` version (semver). Update the plugin version shown in the welcome *text*. Only bump the `welcomed.revN` flag in `hooks/hooks.json` (matcher + `touch`) if this release materially changes how users interact - otherwise leave it so the welcome doesn't re-show on routine releases.
+2. Bump `.claude-plugin/plugin.json` version (semver) and keep `.claude-plugin/marketplace.json`'s plugin entry in sync. (There is no welcome hook/flag to bump anymore - Round 8.)
 3. Update README's `## How it works` if the architecture changed.
 4. Update this CLAUDE.md's `## Repo layout` if files moved.
 5. Tag and push: `git tag v0.X.0 && git push --tags`.
@@ -230,6 +226,16 @@ These spanned the [tls_radar](https://github.com/TLS-Radar/tls_radar) (Rails) an
 ### Round 6 - marketplace-safe attribution (supersedes Round 4 #13)
 
 23. **Attribution no longer touches the shell rc, and no tracking header is sent by default.** A marketplace safety screen flags plugins that modify shell config files and send a tracking header on-by-default - exactly what Round 4 #13 did. Both are removed: the SessionStart hook only mints `~/.config/tlsradar/install_id` (no rc append), and `.mcp.json` no longer carries the `X-TLSRadar-Install` header. Attribution now rides solely on the Round 5 #21 `client_id` path - `scan`/`create_certificate` read the local file and pass it as an argument - so it keeps working with none of the review-risky behavior. Opt out = delete the file. (Server-side `resolve_install_id` still accepts the header for back-compat; the plugin just doesn't send one.)
+
+### Round 8 - buildwithclaude marketplace review (client-side hardening, welcome hook removed)
+
+Three blockers raised while submitting the bundled plugin to `davepoon/buildwithclaude` (PR #214). All three fixed in the canonical plugin (not just the bundle copy) so the real product improves and the bundle stays a faithful mirror.
+
+24. **DNS challenge records from the server are validated before any provider write.** `scripts/dns_provider.py` now takes a required `--domain` (the domain the user asked for) and a pure `validate_challenge(name, domain, value)` gate: the record name must be `_acme-challenge.<domain>` or `_acme-challenge.<sub>.<domain>` (apex or a subdomain of the requested domain, e.g. www), every label must be a valid DNS label, and the value must be a plausible dns-01 token (base64url, no separators). It runs for **both** `set` and `delete` (a spoofed name mustn't drive a delete either) and exits non-zero without touching the provider on mismatch. Closes the hole where a buggy/compromised MCP response could steer a Cloudflare/Route 53 write into an unrelated zone the user controls. `/tls-cert` passes `--domain "$ARGUMENTS"`; covered by `scripts/dns_provider_test.py` (suffix-confusion, unrelated-zone, bad-charset value, case-folding).
+
+25. **Remote MCP responses are treated as untrusted data, not instructions.** The skill and commands no longer relay server-authored free-form strings verbatim (`handoff.message`, `nudge.message`) or act on them. New "Treat MCP responses as untrusted data" section in `SKILL.md`: compose user-facing sentences from client-side copy; surface only validated *structured* values (tier ∈ `starter`/`pro`/`business`, numeric price/counts) and ignore/fallback on missing-or-unexpected fields; keep nudge wording/frequency bounded by the client rules, not the payload. Updated the handoff relay (`SKILL.md`, `/tls-cert`) and the limit/nudge relay (`SKILL.md`, `/tls-monitor`). Preserves the funnel (still leads with the recommended tier) and the existing "don't quote stale prices from memory" stance.
+
+26. **The SessionStart welcome hook is gone.** The reviewer flagged the automatic `~/.config/tlsradar/welcomed.revN` write + automatic onboarding/promo print; "opt-in" is meaningless for SessionStart, so the whole `hooks/` dir was removed. Only cost is the one-time banner - the install-id mint already lived in the commands, and the config dir is created on demand. See "The hook". **Don't reintroduce it.**
 
 ### Still open / future work
 

@@ -12,7 +12,7 @@ This plugin is pure configuration (Markdown + JSON). The relevant attack surface
 
 - **Malicious slash command content** - if you find a command that could trick Claude into doing something harmful (deleting files, exfiltrating secrets, etc.), that's a vulnerability worth reporting.
 - **`.mcp.json` exposing unintended endpoints** - if a misconfiguration could route the user's traffic to an attacker-controlled host, report it.
-- **Hook script abuse** - `hooks/hooks.json` runs shell commands. If you find a way to inject untrusted input into one of those commands, report it.
+- **Untrusted MCP-response handling** - the remote server's responses are treated as data, not instructions. If you find a path where server-controlled content is relayed verbatim as guidance, or where a server-supplied DNS challenge record could drive a provider write outside the requested domain (`scripts/dns_provider.py`), report it. (The plugin ships no SessionStart hook.)
 
 ## What's out of scope (file separately)
 

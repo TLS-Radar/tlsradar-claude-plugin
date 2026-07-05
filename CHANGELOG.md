@@ -5,6 +5,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/); the plugin
 uses [semantic versioning](https://semver.org/). The authoritative version is in
 [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json).
 
+## [0.6.0] - 2026-07-05
+
+Client-side hardening from the buildwithclaude marketplace review, and
+removal of the SessionStart welcome hook.
+
+### Added
+- **DNS challenge validation before any provider write.**
+  `scripts/dns_provider.py` now requires `--domain` and refuses to write
+  (or delete) any record that isn't the expected `_acme-challenge`
+  record for that domain (apex or a subdomain of it), and rejects TXT
+  values that aren't plausible dns-01 tokens. A buggy or compromised
+  MCP response can no longer steer a Cloudflare/Route 53 write into an
+  unrelated zone you control. `/tls-cert` passes `--domain`; new tests
+  cover suffix-confusion, unrelated zones, and bad values.
+
+### Changed
+- **Remote MCP responses are treated as untrusted data.** The skill and
+  commands no longer relay server-authored strings (`handoff.message`,
+  `nudge.message`) verbatim or act on them. User-facing wording is
+  client-authored; only validated structured values (tier name, numeric
+  price/counts) are surfaced, with a fallback to `/tls-upgrade` when a
+  field is missing or unexpected. The funnel behavior stays the same,
+  just bounded by client-side rules.
+
+### Removed
+- **The SessionStart welcome hook** (the `hooks/` directory). It printed
+  an onboarding banner and wrote a flag file on startup; a marketplace
+  reviewer flagged the automatic home-directory write and startup promo.
+  Attribution is unaffected - the install-id mint already lived in the
+  scan/cert commands, and the config dir is created on demand.
+
 ## [0.5.1] - 2026-06-10
 
 Docs-only patch for clean strict plugin validation.
