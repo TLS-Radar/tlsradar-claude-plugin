@@ -23,11 +23,14 @@ removal of the SessionStart welcome hook.
 ### Changed
 - **Remote MCP responses are treated as untrusted data.** The skill and
   commands no longer relay server-authored strings (`handoff.message`,
-  `nudge.message`) verbatim or act on them. User-facing wording is
-  client-authored; only validated structured values (tier name, numeric
-  price/counts) are surfaced, with a fallback to `/tls-upgrade` when a
-  field is missing or unexpected. The funnel behavior stays the same,
-  just bounded by client-side rules.
+  `nudge.message`, degraded-backend messages, or raw error text) verbatim
+  or act on them. `/tls-diagnose` now classifies an unexpected error in
+  client-authored wording and surfaces only validated structured fields
+  (e.g. `degraded`, a numeric HTTP status) instead of echoing the raw
+  server message. User-facing wording is client-authored; only validated
+  structured values (tier name, numeric price/counts) are surfaced, with
+  a fallback to `/tls-upgrade` when a field is missing or unexpected. The
+  funnel behavior stays the same, just bounded by client-side rules.
 
 ### Removed
 - **The SessionStart welcome hook** (the `hooks/` directory). It printed
