@@ -5,6 +5,29 @@ The format follows [Keep a Changelog](https://keepachangelog.com/); the plugin
 uses [semantic versioning](https://semver.org/). The authoritative version is in
 [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json).
 
+## [0.6.1] - 2026-07-05
+
+Close a shell-injection boundary in the DNS-provider flow (buildwithclaude
+review follow-up).
+
+### Changed
+- **Untrusted challenge records never touch a shell.** Previously
+  `/tls-cert` interpolated the MCP response's `record.name`/`record.value`
+  directly into the `dns_provider.py` command line, so shell expansion of
+  `$(...)`, backticks, or `;` could happen before Python could reject the
+  value. Now `/tls-cert` writes the records to
+  `~/.config/tlsradar/challenge-records.json` with the Write tool (no
+  shell), and the helper reads them via `--records-file`, structurally
+  validates each (`json.load` can't execute; non-string fields rejected),
+  runs the existing `_acme-challenge`/base64url checks on every record,
+  and only then performs the provider write or delete. Only the fixed file
+  path and the user's own domain reach the shell.
+
+### Added
+- **End-to-end repro test** (`MainClosesShellBoundary`) proving a malicious
+  TXT value (e.g. `$(rm -rf ~)`) returns exit 2 with the provider never
+  called, plus structural-validation and shell-metacharacter cases.
+
 ## [0.6.0] - 2026-07-05
 
 Client-side hardening from the buildwithclaude marketplace review, and
