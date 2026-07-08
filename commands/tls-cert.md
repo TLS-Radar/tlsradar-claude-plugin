@@ -1,7 +1,7 @@
 ---
 description: Issue a free 90-day Let's Encrypt certificate
 argument-hint: <domain>
-allowed-tools: Bash(openssl*), Bash(python3 *dns_provider.py*), Bash(mkdir -p *tlsradar*), Read, Write
+allowed-tools: Bash(openssl*), Bash(python3 *dns_provider.py*), Bash(python3 *cert_helper.py*), Bash(mkdir -p *tlsradar*), Read, Write
 ---
 
 Issue a free SSL/TLS certificate from Let's Encrypt for `$ARGUMENTS`, entirely through the TLS Radar MCP server's certificate tools. The private key is generated **locally** and never leaves the machine.
@@ -28,13 +28,23 @@ When the user picks one, ask "save as the default?" - if yes, write it back to `
 
 The Beacon `challenge` value is `http-01` for `http-01`, otherwise `dns-01` (all three dns-01 variants differ only in *how the plugin sets the TXT record*).
 
-## 2. Start the order
+## 2. Start the order (or resume one)
+
+**Resume check first:** read `${HOME}/.config/tlsradar/orders/$ARGUMENTS.json` (it may not exist). If it exists and has an `order_id` but no `completed_at`, there's an in-flight order from a previous session - tell the user when it was started (`created_at`) and offer to resume instead of starting over: skip `create_certificate`, re-show the saved challenge records if they still need publishing, and continue from step 4 with the saved `order_id` (passing the saved `resume_token` at finalize). If resuming fails because the order is gone and can't be rehydrated, or the user declines, start fresh below (the new order overwrites the file).
 
 You'll need the user's email. When you ask for it (or before using one from context), tell them plainly what it's for: **the Let's Encrypt order, and a one-time follow-up email from TLS Radar about monitoring this certificate's expiry. No marketing unless they opt in.** Only set `marketing_consent: true` if they explicitly ask for it (default is off - keep it off).
 
 Read `${HOME}/.config/tlsradar/install_id` if it exists. Call `tlsradar.create_certificate` with `domain=$ARGUMENTS`, `email`, `challenge` (`dns-01` or `http-01`), and `client_id` = that install id (for anonymous funnel attribution; omit if the file is absent). It returns `order_id`, either `dns_records` or `http_files`, a `resume_token`, and an `install_id`.
 
-**Keep two things from the response for later:** the `resume_token` (lets you finalize even if the order is interrupted for a day) and the `install_id` - if `~/.config/tlsradar/install_id` didn't exist, write the returned `install_id` there so future calls are attributed to the same install.
+**Persist the order state so an interrupted issuance survives the session.** With the **Write tool** (never a shell command - the response fields are untrusted), save `${HOME}/.config/tlsradar/orders/$ARGUMENTS.json`:
+
+```json
+{ "domain": "$ARGUMENTS", "order_id": "…", "resume_token": "…",
+  "challenge": "dns-01", "email": "…", "created_at": "<now, ISO 8601>",
+  "dns_records": [ … ] }
+```
+
+(`dns_records` or `http_files`, copied straight from the response.) This file is what the resume check above reads, and `/tls-renew` later reuses the `email`/`challenge` from it. Also: if `~/.config/tlsradar/install_id` didn't exist, write the returned `install_id` there so future calls are attributed to the same install.
 
 **If any certificate-tool call returns `structuredContent.degraded: true`** (the certificate backend is briefly unavailable - server-side and transient), don't treat it as a hard failure or retry in a loop. Act on the validated `degraded`/`retryable` flags, not on any server-provided message string: in your own words, tell the user the certificate backend is briefly unavailable, note that `/tls-scan` still works, and suggest trying again in a minute. This can happen at any step below.
 
@@ -69,23 +79,31 @@ Poll `tlsradar.check_certificate_propagation` with `order_id` until `all_found` 
 
 ## 5. Generate a CSR locally, then finalize
 
-Generate the key + CSR on the user's machine. **The SAN set depends on the method:** `dns-01*` issues `{$ARGUMENTS, www.$ARGUMENTS}`; `http-01` issues `$ARGUMENTS` only.
+Generate the key + CSR on the user's machine with the bundled, tested helper (it validates the domain, picks the SAN set the order expects - `dns-01*` issues `{$ARGUMENTS, www.$ARGUMENTS}`, `http-01` issues `$ARGUMENTS` only - writes the key `0600`, and backs up any existing key instead of clobbering it):
 
 ```
-mkdir -p "${HOME}/.config/tlsradar/certs"
-# dns-01 variants (apex + www):
-openssl req -new -newkey rsa:2048 -nodes \
-  -keyout "${HOME}/.config/tlsradar/certs/$ARGUMENTS.key" \
-  -out "${HOME}/.config/tlsradar/certs/$ARGUMENTS.csr" \
-  -subj "/CN=$ARGUMENTS" -addext "subjectAltName=DNS:$ARGUMENTS,DNS:www.$ARGUMENTS"
-# http-01 (apex only): drop the ,DNS:www.$ARGUMENTS from subjectAltName
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/cert_helper.py" csr \
+  --domain "$ARGUMENTS" --challenge <dns-01|http-01>
 ```
+
+It prints a JSON summary with the `key` and `csr` paths (under `~/.config/tlsradar/certs/`). Don't hand-build the `openssl req` command yourself.
 
 Read the `.csr` and call `tlsradar.finalize_certificate` with `order_id` + `csr_pem` (and the `resume_token` from step 2 - harmless normally, and the only way to finish if Beacon purged the order after a long gap). It validates, waits briefly, and issues, returning `fullchain_pem`. If it replies "still validating," re-run `tlsradar.check_certificate_propagation`, then `tlsradar.finalize_certificate` again - **safe to retry** (a completed order returns the same chain, never re-issues).
 
-## 6. Save the certificate
+## 6. Save and verify the certificate
 
-Write `fullchain_pem` to `${HOME}/.config/tlsradar/certs/$ARGUMENTS.fullchain.pem` (next to the `.key`). Tell the user both paths.
+Write `fullchain_pem` to `${HOME}/.config/tlsradar/certs/$ARGUMENTS.fullchain.pem` (next to the `.key`) with the **Write tool** - the PEM is server-provided, so it never goes through a shell. Then verify the chain actually covers the requested domain before telling the user to install it:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/cert_helper.py" verify-chain \
+  --domain "$ARGUMENTS" --challenge <dns-01|http-01> \
+  --chain-file "${HOME}/.config/tlsradar/certs/$ARGUMENTS.fullchain.pem"
+```
+
+- **Exit 0:** relay the `not_after` / `days_remaining` from its JSON output and tell the user both file paths.
+- **Exit 2:** the chain doesn't parse or doesn't cover `$ARGUMENTS` - tell the user the issued certificate failed local verification and should **not** be installed, and suggest `/tls-diagnose` + retrying. Don't present the files as usable.
+
+Finally, update `${HOME}/.config/tlsradar/orders/$ARGUMENTS.json` with the Write tool, adding `"completed_at": "<now, ISO 8601>"` and the `not_after` from verification (keep the other fields) - this marks the order done for the resume check and gives `/tls-renew` local history.
 
 If they want a PKCS#12 (Windows/Java), package it **locally** - key and passphrase stay on their machine (openssl prompts for the export password; never ask for it in chat):
 

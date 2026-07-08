@@ -5,6 +5,46 @@ The format follows [Keep a Changelog](https://keepachangelog.com/); the plugin
 uses [semantic versioning](https://semver.org/). The authoritative version is in
 [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json).
 
+## [0.7.0] - 2026-07-08
+
+More of `/tls-cert` moves from prose into tested code, issuance becomes
+resumable across sessions, and the model-routing eval now runs on a
+schedule.
+
+### Added
+- **Tested cert helper** (`scripts/cert_helper.py` +
+  `cert_helper_test.py`). The key/CSR generation that used to be a
+  hand-built `openssl req` line in the prompt is now
+  `cert_helper.py csr`: it validates the domain before anything runs,
+  picks the SAN set the order expects (dns-01 = apex+www, http-01 =
+  apex), writes the key `0600` in a `0700` dir, and backs up an
+  existing key instead of clobbering it (the old key may be the only
+  copy of one still deployed).
+- **Issued chains are verified before being presented as usable.**
+  The fullchain PEM is server-provided (untrusted); it's saved with
+  the Write tool (no shell) and `cert_helper.py verify-chain` then
+  parses the leaf with openssl and refuses (exit 2) unless its SANs
+  cover the requested domain - a wrong or garbage chain is caught
+  before the user installs it. On success it reports SANs, expiry,
+  and days remaining.
+- **Resumable issuance.** `/tls-cert` persists each order to
+  `~/.config/tlsradar/orders/<domain>.json` (order_id, resume_token,
+  challenge, email, challenge records) and offers to resume an
+  in-flight order from a previous session instead of starting over.
+  Once issued, the file is marked `completed_at` and becomes local
+  history: `/tls-renew` reads it to reuse the saved email and
+  challenge method (with confirmation) instead of re-asking.
+- **Scheduled LLM routing eval** (`.github/workflows/llm-eval.yml`).
+  The real model-routing eval (`evals/run_evals.py --llm`) now runs
+  weekly (and on manual dispatch) instead of being local-only, so a
+  routing regression is noticed within days. Skips cleanly when the
+  `ANTHROPIC_API_KEY` secret is absent; never gates merges.
+
+### Changed
+- `/tls-cert` and `/tls-renew` call the cert helper instead of
+  hand-building `openssl req`; `cert_helper_test.py` runs in CI
+  alongside the DNS-provider tests.
+
 ## [0.6.1] - 2026-07-05
 
 Close a shell-injection boundary in the DNS-provider flow (buildwithclaude

@@ -26,6 +26,8 @@ jobs:
         run: python3 evals/run_evals.py
       - name: DNS-provider helper unit tests
         run: python3 scripts/dns_provider_test.py
+      - name: Cert helper unit tests (CSR + chain verification)
+        run: python3 scripts/cert_helper_test.py
       - name: Changelog extractor unit tests
         run: python3 scripts/extract_changelog_test.py
 

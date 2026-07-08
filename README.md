@@ -44,7 +44,9 @@ When you run `/mcp`, Claude Code fetches `tlsradar.com/.well-known/oauth-authori
 
 ### Certificates keep your private key local
 
-`/tls-cert` generates the key + CSR on **your** machine with `openssl` and sends only the CSR. The private key never leaves your computer and no passphrase is ever typed into the chat. If you want a `.p12` bundle (e.g. for Windows/Java import), the plugin packages it locally too.
+`/tls-cert` generates the key + CSR on **your** machine (via a bundled, tested helper that writes the key with `0600` permissions and never overwrites an existing key - it backs it up) and sends only the CSR. The private key never leaves your computer and no passphrase is ever typed into the chat. Before presenting the issued certificate, the plugin verifies locally that the returned chain actually covers your domain. If you want a `.p12` bundle (e.g. for Windows/Java import), the plugin packages it locally too.
+
+An interrupted issuance is resumable: the order state is saved to `~/.config/tlsradar/orders/<domain>.json`, so you can close the session mid-flow and later say "finish my cert for example.com" (or re-run `/tls-cert`) to pick up where you left off. `/tls-renew` reuses the saved email and challenge method from that file, with confirmation.
 
 You choose how to prove control of the domain, and the plugin remembers your choice (in `~/.config/tlsradar/config.json`):
 
@@ -138,7 +140,7 @@ Nothing is required. Optional environment variables:
 ├── commands/                        # slash commands (how to add one: CONTRIBUTING.md)
 ├── skills/                          # NL skill router (with its own README)
 ├── tools/manifest.json              # single source of truth for tool names
-├── scripts/                         # CI guards + tested DNS-provider helper
+├── scripts/                         # CI guards + tested local helpers (DNS provider, cert CSR/chain)
 └── evals/                           # tool-routing evals (prompt → expected tool)
 ```
 

@@ -38,7 +38,9 @@ There are slash commands only for the common funnel/multi-step flows (`/tls-scan
 
 ## Certificate issuance (CSR-only)
 
-The cert flow keeps the private key on the user's machine: generate a key + CSR locally with `openssl`, pass the CSR to `tlsradar.finalize_certificate`. Never ask the user for a private-key passphrase in chat. If they want a `.p12`, package it locally with `openssl pkcs12 -export` (see `/tls-cert`). The certificate tool descriptions spell out the step order.
+The cert flow keeps the private key on the user's machine: generate a key + CSR locally (use the bundled `scripts/cert_helper.py csr` helper - it validates the domain, picks the right SAN set, and writes the key `0600`), pass the CSR to `tlsradar.finalize_certificate`, then verify the returned chain covers the domain with `cert_helper.py verify-chain` before presenting it as usable. Never ask the user for a private-key passphrase in chat. If they want a `.p12`, package it locally with `openssl pkcs12 -export` (see `/tls-cert`). The certificate tool descriptions spell out the step order.
+
+**Resuming an interrupted issuance:** `/tls-cert` persists each order to `~/.config/tlsradar/orders/<domain>.json` (order_id, resume_token, challenge, email; `completed_at` set once issued). When the user wants to finish, check, or retry an issuance - "finish my cert for X", "did my cert go through" - read that file first: an entry without `completed_at` resumes via `tlsradar.get_certificate_status` / `tlsradar.finalize_certificate` (pass the saved `resume_token`) instead of starting a new order.
 
 ### Anonymous attribution (public funnel tools)
 

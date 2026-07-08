@@ -1,0 +1,36 @@
+name: llm-routing-eval
+
+# The static eval (verify-contracts.yml) proves every expected tool exists and
+# is routed in SKILL.md. It cannot catch the regression that actually hurts a
+# prompt-driven plugin: the model picking the WRONG tool for a user's request.
+# This runs the real model-routing eval (evals/run_evals.py --llm) on a weekly
+# schedule so routing drift is noticed within days, not when a user reports it.
+#
+# Scheduled (not per-PR) on purpose: it needs the network + an API key and
+# costs tokens, so it must never gate a merge. A red run here means a real
+# routing regression (or a case that needs updating) - worth a human look.
+# Without the ANTHROPIC_API_KEY secret it skips cleanly with a warning.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {} # allow a manual run from the Actions tab
+
+jobs:
+  llm-eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Run the model-routing eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::warning::ANTHROPIC_API_KEY secret not set - skipping the LLM routing eval."
+            exit 0
+          fi
+          python3 -m pip install --quiet anthropic
+          python3 evals/run_evals.py --llm

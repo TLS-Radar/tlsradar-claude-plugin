@@ -34,8 +34,12 @@ There is no binary. The plugin is pure configuration + Markdown. Claude Code's M
 ├── scripts/generate_router.py         ← regenerates SKILL.md's tool table from the manifest (--check in CI)
 ├── scripts/dns_provider.py            ← tested local helper: set/delete the dns-01 TXT via Cloudflare/Route53 (creds stay local)
 ├── scripts/dns_provider_test.py       ← unit tests for the gotcha-prone provider logic (root/quoting/payloads)
+├── scripts/cert_helper.py             ← tested local helper: key+CSR generation (0600, right SAN set) + verify-chain (reject a chain that doesn't cover the domain)
+├── scripts/cert_helper_test.py        ← unit tests incl. openssl round-trips (skipped when openssl is absent)
 ├── evals/                             ← tool-routing evals (prompt → expected tool); static check runs in CI
-├── .github/workflows/verify-contracts.yml ← runs guard + router --check + eval on every PR/push
+├── .github/workflows/verify-contracts.yml ← runs guard + router --check + eval + helper tests on every PR/push
+├── .github/workflows/llm-eval.yml     ← weekly model-routing eval (run_evals.py --llm); skips cleanly without the ANTHROPIC_API_KEY secret
+├── .github/workflows/release.yml      ← version-file-driven release: bump plugin.json on main → tag + GitHub Release (idempotent)
 ├── commands/                          ← slash commands (how to add one: CONTRIBUTING.md)
 │   ├── tls-scan.md                    ← free anonymous scan (public)
 │   ├── tls-cert.md                    ← free LE cert issuance via tlsradar.cert_* (CSR-only, local key)
@@ -174,11 +178,11 @@ Both are written so a model reading the skill mid-conversation chooses the right
 
 ## Release process
 
-1. Verify locally: `.mcp.json` interpolates correctly; all `tlsradar.*` names match production `tools/list`. Run `python3 scripts/verify_tool_names.py` and `python3 evals/run_evals.py` (CI runs both, offline/deterministic). For the Beacon side, run `python3 scripts/verify_beacon_contract.py` (needs `BEACON_PLUGIN_TOKEN_PUBLIC`) - it calls Beacon's live `tools/list` and asserts every name in the manifest's `beacon` section still exists, so the `cert_*` proxy dependency can't silently drift. CI runs it too, but as a **non-blocking** job (it needs the network + token; an inconclusive run is ignored, only real drift is surfaced). If a tool was renamed/added, update `tools/manifest.json` (and the `Beacon::Client` + `cert_*` tools on the Rails side for beacon renames) in the same PR.
+1. Verify locally: `.mcp.json` interpolates correctly; all `tlsradar.*` names match production `tools/list`. Run `python3 scripts/verify_tool_names.py`, `python3 evals/run_evals.py`, `python3 scripts/dns_provider_test.py`, and `python3 scripts/cert_helper_test.py` (CI runs all of these, offline/deterministic). For the Beacon side, run `python3 scripts/verify_beacon_contract.py` (needs `BEACON_PLUGIN_TOKEN_PUBLIC`) - it calls Beacon's live `tools/list` and asserts every name in the manifest's `beacon` section still exists, so the `cert_*` proxy dependency can't silently drift. CI runs it too, but as a **non-blocking** job (it needs the network + token; an inconclusive run is ignored, only real drift is surfaced). If a tool was renamed/added, update `tools/manifest.json` (and the `Beacon::Client` + `cert_*` tools on the Rails side for beacon renames) in the same PR.
 2. Bump `.claude-plugin/plugin.json` version (semver) and keep `.claude-plugin/marketplace.json`'s plugin entry in sync. (There is no welcome hook/flag to bump anymore - Round 8.)
 3. Update README's `## How it works` if the architecture changed.
 4. Update this CLAUDE.md's `## Repo layout` if files moved.
-5. Tag and push: `git tag v0.X.0 && git push --tags`.
+5. Add a matching `CHANGELOG.md` section and push to main. **Don't tag by hand:** `.github/workflows/release.yml` sees the `plugin.json` version change, cuts the `vX.Y.Z` tag, and creates the GitHub Release with notes from the changelog section (idempotent - an existing tag no-ops). Verify the `release` workflow run went green after pushing.
 6. (Future) Submit to whatever Claude Code marketplace becomes the install path.
 
 ## Known issues / future work
@@ -239,13 +243,21 @@ Three blockers raised while submitting the bundled plugin to `davepoon/buildwith
 
 26. **The SessionStart welcome hook is gone.** The reviewer flagged the automatic `~/.config/tlsradar/welcomed.revN` write + automatic onboarding/promo print; "opt-in" is meaningless for SessionStart, so the whole `hooks/` dir was removed. Only cost is the one-time banner - the install-id mint already lived in the commands, and the config dir is created on demand. See "The hook". **Don't reintroduce it.**
 
+### Round 9 - retrospective follow-through: more code, less prose; resumable issuance; scheduled routing eval (shipped, 0.7.0)
+
+Three client-side items from a "what would we build differently from scratch" retrospective. The common thread continues Rounds 5/8: if a step can be a tested script or a contract instead of an instruction to a model, make it one.
+
+27. **The deterministic spine of `/tls-cert` moved into a second tested helper.** `scripts/cert_helper.py` (+ `cert_helper_test.py`, in CI next to the DNS tests) owns key+CSR generation (`csr`: validates the domain *before* anything runs, picks the SAN set the order expects - dns-01 = apex+www, http-01 = apex - writes the key `0600` in a `0700` dir, backs up an existing key instead of clobbering the possibly-only copy of a deployed one) and **issued-chain verification** (`verify-chain`: the fullchain PEM is untrusted server output, saved via the Write tool and passed by fixed path only; the helper parses the leaf with openssl and exits 2 unless its SANs cover the requested domain, so a wrong/garbage chain is rejected before the user installs it). Same shell-boundary discipline as `dns_provider.py`: argv lists, no `shell=True`, server bytes travel via files.
+28. **Issuance is resumable across sessions (client side).** `/tls-cert` persists each order to `~/.config/tlsradar/orders/<domain>.json` (order_id, resume_token, challenge, email, challenge records; written with the Write tool) and offers to resume an in-flight order instead of starting over; the skill routes NL "finish my cert for X" through the same file. On issuance the file gains `completed_at` and becomes local history - `/tls-renew` reads it to reuse the saved email/challenge (with confirmation). Durable *server-side* order history (true renew-by-domain) is still backend work.
+29. **The model-routing eval runs on a schedule.** `.github/workflows/llm-eval.yml` runs `evals/run_evals.py --llm` weekly + on manual dispatch - the only check that exercises what the product actually is (a model routing requests). Non-gating by design; skips cleanly without the `ANTHROPIC_API_KEY` secret.
+
 ### Still open / future work
 
 - **Issuance is unauthenticated by design - not gated.** `cert_*` is public so anonymous users can issue (the funnel). We deliberately do NOT hard-gate on the install-id: it's a client-set header, trivially forged, so gating on it would be security theater that also dents conversion. Abuse control stays where it can't be faked: Beacon's per-IP rate limiter (`internal/ratelimit`) and Rails-layer throttling. If issuance abuse becomes real, add a proof-of-work or account requirement, not an install-id gate.
 - **Add a `beacon.health` tool.** `/tls-diagnose` infers Beacon reachability from a `get_certificate_status` probe (now reading the `degraded` flag). A dedicated health/ping tool would still be cleaner.
 - **Funnel instrumentation is partial.** Attribution rides on the `client_id` arg the commands pass (Round 6), but it depends on the model actually reading the file and passing it, and signup attribution still isn't joined up end-to-end (install-id → signup → subscription).
-- **`--llm` eval is opt-in.** Static coverage runs in CI; the model-routing check needs `ANTHROPIC_API_KEY`.
-- **Beacon orders TTL vs renew.** Beacon purges orders ~24h after creation, so `renew_certificate(order_id)` rarely applies at real renewal time; `/tls-renew` falls back to `create_certificate`. (Resume tokens, Round 5 #19, now let a *single* in-flight order be finalized past the purge, but renew-by-domain still needs durable history.)
+- **`--llm` eval needs the secret to be useful.** It now runs weekly in CI (Round 9 #29, `llm-eval.yml`) but skips without the repo's `ANTHROPIC_API_KEY` secret - make sure that secret stays set, or the eval is silently a no-op (a skipped run prints a workflow warning).
+- **Beacon orders TTL vs renew.** Beacon purges orders ~24h after creation, so `renew_certificate(order_id)` rarely applies at real renewal time; `/tls-renew` falls back to `create_certificate`. Round 9 #28 gives the *client* durable history (`orders/<domain>.json` - saved email/challenge reuse), but true renew-by-domain still needs durable order history server-side. (Resume tokens, Round 5 #19, let a *single* in-flight order be finalized past the purge.)
 - **HTTP-01 needs port 80 reachable** by Let's Encrypt and is apex-only - document this to users; dns-01 remains the default for good reason.
 - **Resume token edge case.** `EnsureFromResumeToken` rehydrates as `dns_pending`, so `finalize_order` re-runs `Validate`→`AcceptChallenges`. The common resume path (order created, never validated, resumed) works. The rare path - order *validated* on LE but not finalized, then purged (>24h) and resumed - can fail because `Accept` on an already-valid authz errors; the user just re-publishes the challenge. Not worth brittle "already valid?" detection in `Validate` for how rarely it happens. Resume tokens also embed the contact email (signed, not encrypted) - don't log them.
 
