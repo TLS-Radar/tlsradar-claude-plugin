@@ -8,11 +8,11 @@ Renew the Let's Encrypt certificate for `$ARGUMENTS`. Renewal issues a fresh 90-
 
 ## Flow
 
-**Check local history first:** read `${HOME}/.config/tlsradar/orders/$ARGUMENTS.json` (written by `/tls-cert`; may not exist). If present it carries the previous order's `order_id`, `email`, `challenge`, and `created_at`/`completed_at` - use it to skip re-asking: confirm with the user that the saved email and challenge method are still right, then reuse them.
+**Check local history first:** read `${HOME}/.config/tlsradar/orders/$ARGUMENTS.json` (written by `/tls-cert`; may not exist). Those files are keyed by the *order domain* the server returned rather than the string the user typed, so if it is absent and `$ARGUMENTS` begins with `www.`, try the name without that prefix too. If present it carries the previous order's `order_id`, `email`, `challenge`, and `created_at`/`completed_at` - use it to skip re-asking: confirm with the user that the saved email and challenge method are still right, then reuse them.
 
 `tlsradar.renew_certificate` clones an existing order by its **`order_id`**, and orders are purged ~24h after creation - so months later at renewal time there's usually no order to clone. Two cases:
 
-- **No usable `order_id` (the normal case - the saved order is older than ~24h):** just run a fresh issuance - it *is* the renewal. Follow `/tls-cert` exactly: `tlsradar.create_certificate(domain=$ARGUMENTS, email=…)` → publish TXT → `tlsradar.check_certificate_propagation` until green → generate a CSR locally (the `cert_helper.py csr` step - it backs up the old key automatically) → `tlsradar.finalize_certificate(order_id, csr_pem)`.
+- **No usable `order_id` (the normal case - the saved order is older than ~24h):** just run a fresh issuance - it *is* the renewal. Follow `/tls-cert` exactly: `tlsradar.create_certificate(domain=$ARGUMENTS, email=…)` → **switch to the `domain` the response returns for every step after that**, exactly as `/tls-cert` step 2 describes (the server strips a leading `www.` and punycodes IDN, and the DNS records and CSR SANs must match the order it actually opened) → publish TXT → `tlsradar.check_certificate_propagation` until green → generate a CSR locally (the `cert_helper.py csr` step - it backs up the old key automatically) → `tlsradar.finalize_certificate(order_id, csr_pem)`.
 - **The saved (or user-supplied) `order_id` is less than ~24h old:** call `tlsradar.renew_certificate` with it to get a fresh order + new TXT records, then continue from the propagation step as above.
 
 Either way the private key is generated locally (CSR path) and the monitoring handoff fires automatically when the cert completes - you do not register anything.
