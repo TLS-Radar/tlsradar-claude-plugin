@@ -2,7 +2,7 @@
 
 [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-7c3aed)](https://github.com/TLS-Radar/tlsradar-claude-plugin)
-[![smithery badge](https://smithery.ai/badge/slmusayev/tls-radar)](https://smithery.ai/servers/slmusayev/tls-radar)
+[![LightNow capabilities](https://lightnow.ai/badge/com.tlsradar/tlsradar)](https://lightnow.ai/servers/com.tlsradar/tlsradar)
 
 Run SSL/TLS scans, issue free Let's Encrypt certificates, and manage cert monitoring from inside Claude Code or Claude Cowork - through a single MCP server, with nothing to configure.
 
